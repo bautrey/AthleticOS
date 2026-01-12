@@ -1,0 +1,193 @@
+// backend/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ Auth & Users ============
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String       @map("password_hash")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  schoolUsers  SchoolUser[]
+
+  @@map("users")
+}
+
+model SchoolUser {
+  id        String   @id @default(cuid())
+  schoolId  String   @map("school_id")
+  userId    String   @map("user_id")
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, userId])
+  @@map("school_users")
+}
+
+enum Role {
+  ADMIN
+  COACH
+  VIEWER
+}
+
+// ============ Core Entities ============
+
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  timezone  String   @default("America/New_York")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  schoolUsers SchoolUser[]
+  teams       Team[]
+  facilities  Facility[]
+
+  @@map("schools")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  schoolId  String   @map("school_id")
+  name      String
+  sport     String
+  level     TeamLevel @default(VARSITY)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  seasons   Season[]
+
+  @@index([schoolId])
+  @@map("teams")
+}
+
+enum TeamLevel {
+  VARSITY
+  JV
+  FRESHMAN
+}
+
+model Season {
+  id        String   @id @default(cuid())
+  teamId    String   @map("team_id")
+  name      String
+  year      Int
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  games     Game[]
+  practices Practice[]
+
+  @@index([teamId])
+  @@map("seasons")
+}
+
+model Facility {
+  id        String       @id @default(cuid())
+  schoolId  String       @map("school_id")
+  name      String
+  type      FacilityType @default(GYM)
+  capacity  Int?
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  school    School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  timeSlots TimeSlot[]
+  games     Game[]
+  practices Practice[]
+
+  @@index([schoolId])
+  @@map("facilities")
+}
+
+enum FacilityType {
+  GYM
+  FIELD
+  POOL
+  COURT
+  TRACK
+  OTHER
+}
+
+model TimeSlot {
+  id         String   @id @default(cuid())
+  facilityId String   @map("facility_id")
+  dayOfWeek  Int      @map("day_of_week") // 0=Sunday, 6=Saturday
+  startTime  String   @map("start_time") // HH:MM format
+  endTime    String   @map("end_time")   // HH:MM format
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@index([facilityId])
+  @@map("time_slots")
+}
+
+model Game {
+  id         String     @id @default(cuid())
+  seasonId   String     @map("season_id")
+  facilityId String?    @map("facility_id")
+  opponent   String
+  datetime   DateTime
+  homeAway   HomeAway   @default(HOME) @map("home_away")
+  status     GameStatus @default(SCHEDULED)
+  notes      String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  season     Season     @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  facility   Facility?  @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+
+  @@index([seasonId])
+  @@index([datetime])
+  @@map("games")
+}
+
+enum HomeAway {
+  HOME
+  AWAY
+  NEUTRAL
+}
+
+enum GameStatus {
+  SCHEDULED
+  CONFIRMED
+  CANCELLED
+  POSTPONED
+  COMPLETED
+}
+
+model Practice {
+  id              String    @id @default(cuid())
+  seasonId        String    @map("season_id")
+  facilityId      String?   @map("facility_id")
+  datetime        DateTime
+  durationMinutes Int       @default(90) @map("duration_minutes")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  season          Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  facility        Facility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+
+  @@index([seasonId])
+  @@index([datetime])
+  @@map("practices")
+}
