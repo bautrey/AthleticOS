@@ -1,4 +1,5 @@
 // backend/src/modules/schools/service.ts
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../common/db.js';
 import { NotFoundError } from '../../common/errors.js';
 import type { CreateSchoolInput, UpdateSchoolInput } from './schemas.js';
@@ -7,7 +8,9 @@ export const schoolsService = {
   async create(input: CreateSchoolInput, userId: string) {
     const school = await prisma.school.create({
       data: {
-        ...input,
+        name: input.name,
+        timezone: input.timezone,
+        settings: (input.settings ?? {}) as Prisma.InputJsonValue,
         schoolUsers: {
           create: { userId, role: 'ADMIN' },
         },
@@ -36,7 +39,10 @@ export const schoolsService = {
     await this.findById(id, userId); // Check access
     const school = await prisma.school.update({
       where: { id },
-      data: input,
+      data: {
+        ...input,
+        settings: input.settings ? (input.settings as Prisma.InputJsonValue) : undefined,
+      },
     });
     return school;
   },
