@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '../components/Layout';
 import { Tabs } from '../components/Tabs';
+import { GamesTab } from '../components/GamesTab';
 import { seasonsApi } from '../api/seasons';
 import { schoolsApi } from '../api/schools';
 
@@ -75,10 +76,7 @@ export function SeasonDetail() {
 
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
         {activeTab === 'games' && (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg font-medium">Games coming soon</p>
-            <p className="mt-1">Schedule and track games for this season</p>
-          </div>
+          <GamesTab seasonId={seasonId!} schoolId={schoolId!} />
         )}
         {activeTab === 'practices' && (
           <div className="text-center py-12 text-gray-500">
