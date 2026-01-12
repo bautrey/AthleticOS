@@ -1,0 +1,49 @@
+# docker-compose.yml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: athleticos
+      POSTGRES_USER: athleticos
+      POSTGRES_PASSWORD: athleticos
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U athleticos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://athleticos:athleticos@db:5432/athleticos
+      JWT_SECRET: dev-secret-change-in-prod
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      PORT: 8000
+    ports:
+      - "8003:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  web:
+    build: ./frontend
+    environment:
+      VITE_API_URL: http://localhost:8003
+    ports:
+      - "3005:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:
