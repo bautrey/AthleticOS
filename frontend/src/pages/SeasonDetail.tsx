@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Layout } from '../components/Layout';
 import { Tabs } from '../components/Tabs';
 import { GamesTab } from '../components/GamesTab';
+import { PracticesTab } from '../components/PracticesTab';
 import { seasonsApi } from '../api/seasons';
 import { schoolsApi } from '../api/schools';
 
@@ -79,10 +80,7 @@ export function SeasonDetail() {
           <GamesTab seasonId={seasonId!} schoolId={schoolId!} />
         )}
         {activeTab === 'practices' && (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg font-medium">Practices coming soon</p>
-            <p className="mt-1">Schedule and manage practice sessions</p>
-          </div>
+          <PracticesTab seasonId={seasonId!} schoolId={schoolId!} />
         )}
       </Tabs>
     </Layout>
