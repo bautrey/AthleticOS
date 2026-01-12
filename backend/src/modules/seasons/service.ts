@@ -12,22 +12,50 @@ export const seasonsService = {
         startDate: new Date(input.startDate),
         endDate: new Date(input.endDate),
       },
+      include: { team: true },
     });
-    return season;
+    return {
+      ...season,
+      sport: season.team.sport,
+    };
+  },
+
+  async findBySchool(schoolId: string) {
+    const seasons = await prisma.season.findMany({
+      where: { team: { schoolId } },
+      include: { team: true },
+      orderBy: [{ year: 'desc' }, { startDate: 'desc' }],
+    });
+    return seasons.map((s) => ({
+      ...s,
+      sport: s.team.sport,
+      teamName: s.team.name,
+    }));
   },
 
   async findByTeam(teamId: string) {
     const seasons = await prisma.season.findMany({
       where: { teamId },
+      include: { team: true },
       orderBy: [{ year: 'desc' }, { startDate: 'desc' }],
     });
-    return seasons;
+    return seasons.map((s) => ({
+      ...s,
+      sport: s.team.sport,
+    }));
   },
 
   async findById(id: string) {
-    const season = await prisma.season.findUnique({ where: { id } });
+    const season = await prisma.season.findUnique({
+      where: { id },
+      include: { team: true },
+    });
     if (!season) throw new NotFoundError('Season', id);
-    return season;
+    return {
+      ...season,
+      sport: season.team.sport,
+      teamName: season.team.name,
+    };
   },
 
   async update(id: string, input: UpdateSeasonInput) {

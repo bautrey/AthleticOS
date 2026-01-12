@@ -3,18 +3,21 @@ import { api } from './client';
 
 export interface Season {
   id: string;
-  schoolId: string;
+  teamId: string;
   name: string;
-  sport: string;
+  year: number;
   startDate: string;
   endDate: string;
+  sport: string;      // derived from team
+  teamName: string;   // derived from team
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateSeasonInput {
+  teamId: string;
   name: string;
-  sport: string;
+  year: number;
   startDate: string;
   endDate: string;
 }
@@ -22,6 +25,11 @@ export interface CreateSeasonInput {
 export const seasonsApi = {
   list: async (schoolId: string): Promise<Season[]> => {
     const { data } = await api.get(`/schools/${schoolId}/seasons`);
+    return data.data;
+  },
+
+  get: async (seasonId: string): Promise<Season> => {
+    const { data } = await api.get(`/seasons/${seasonId}`);
     return data.data;
   },
 
