@@ -46,10 +46,12 @@ export function SchoolDetail() {
   return (
     <Layout>
       <div className="mb-6">
-        <Link to="/" className="text-blue-600 hover:underline text-sm">
-          &larr; Back to Dashboard
-        </Link>
-        <h1 className="text-2xl font-bold mt-2">{school.name}</h1>
+        <nav className="text-sm mb-4">
+          <Link to="/" className="text-gray-500 hover:text-gray-700">Dashboard</Link>
+          <span className="mx-2 text-gray-400">/</span>
+          <span className="text-gray-900">{school.name}</span>
+        </nav>
+        <h1 className="text-2xl font-bold">{school.name}</h1>
         <p className="text-gray-500">{school.timezone}</p>
       </div>
 
