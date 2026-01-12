@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '../components/Layout';
 import { Tabs } from '../components/Tabs';
+import { TeamsTab } from '../components/TeamsTab';
 import { schoolsApi } from '../api/schools';
 
 const TABS = [
@@ -50,7 +51,7 @@ export function SchoolDetail() {
       </div>
 
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
-        {activeTab === 'teams' && <div>Teams content coming soon...</div>}
+        {activeTab === 'teams' && <TeamsTab schoolId={schoolId!} />}
         {activeTab === 'facilities' && <div>Facilities content coming soon...</div>}
         {activeTab === 'seasons' && <div>Seasons content coming soon...</div>}
         {activeTab === 'settings' && <div>Settings content coming soon...</div>}
