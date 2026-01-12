@@ -14,6 +14,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-2">
         <NavLink
           to="/"
+          end
           className={({ isActive }) =>
             `block px-4 py-2 rounded ${isActive ? 'bg-blue-600' : 'hover:bg-gray-800'}`
           }
