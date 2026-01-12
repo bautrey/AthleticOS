@@ -20,7 +20,7 @@ services:
     build: ./backend
     environment:
       DATABASE_URL: postgresql://athleticos:athleticos@db:5432/athleticos
-      JWT_SECRET: dev-secret-change-in-prod
+      JWT_SECRET: dev-secret-change-in-prod-at-least-32-chars
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
       PORT: 8000
@@ -43,7 +43,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: npm run dev -- --host
+    command: npm run dev -- --host --port 3000
 
 volumes:
   postgres_data:
