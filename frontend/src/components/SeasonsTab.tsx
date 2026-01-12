@@ -1,5 +1,6 @@
 // frontend/src/components/SeasonsTab.tsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { seasonsApi } from '../api/seasons';
 import { CreateSeasonModal } from './CreateSeasonModal';
@@ -10,6 +11,7 @@ interface SeasonsTabProps {
 }
 
 export function SeasonsTab({ schoolId }: SeasonsTabProps) {
+  const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { data: seasons, isLoading } = useQuery({
@@ -50,6 +52,7 @@ export function SeasonsTab({ schoolId }: SeasonsTabProps) {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sport</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End</th>
@@ -57,8 +60,13 @@ export function SeasonsTab({ schoolId }: SeasonsTabProps) {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {seasons?.map((season) => (
-                <tr key={season.id} className="hover:bg-gray-50">
+                <tr
+                  key={season.id}
+                  onClick={() => navigate(`/schools/${schoolId}/seasons/${season.id}`)}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{season.name}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{season.teamName}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{season.sport}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{formatDate(season.startDate)}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{formatDate(season.endDate)}</td>
