@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { seasonsApi } from '../api/seasons';
 import { CreateSeasonModal } from './CreateSeasonModal';
+import { EmptyState } from './EmptyState';
 
 interface SeasonsTabProps {
   schoolId: string;
@@ -35,7 +36,14 @@ export function SeasonsTab({ schoolId }: SeasonsTabProps) {
       {isLoading ? (
         <p className="text-gray-500">Loading...</p>
       ) : seasons?.length === 0 ? (
-        <p className="text-gray-500">No seasons yet. Create your first season!</p>
+        <EmptyState
+          title="No seasons yet"
+          description="Create your first season to get started."
+          action={{
+            label: '+ Add Season',
+            onClick: () => setIsCreateModalOpen(true),
+          }}
+        />
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">

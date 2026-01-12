@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { facilitiesApi } from '../api/facilities';
 import { CreateFacilityModal } from './CreateFacilityModal';
+import { EmptyState } from './EmptyState';
 
 interface FacilitiesTabProps {
   schoolId: string;
@@ -31,7 +32,14 @@ export function FacilitiesTab({ schoolId }: FacilitiesTabProps) {
       {isLoading ? (
         <p className="text-gray-500">Loading...</p>
       ) : facilities?.length === 0 ? (
-        <p className="text-gray-500">No facilities yet. Add your first facility!</p>
+        <EmptyState
+          title="No facilities yet"
+          description="Add your first facility to get started."
+          action={{
+            label: '+ Add Facility',
+            onClick: () => setIsCreateModalOpen(true),
+          }}
+        />
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">

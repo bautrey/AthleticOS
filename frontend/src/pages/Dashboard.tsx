@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Layout } from '../components/Layout';
 import { SchoolCard } from '../components/SchoolCard';
 import { CreateSchoolModal } from '../components/CreateSchoolModal';
+import { EmptyState } from '../components/EmptyState';
 import { schoolsApi } from '../api/schools';
 
 export function Dashboard() {
@@ -27,6 +28,15 @@ export function Dashboard() {
 
       {isLoading ? (
         <p className="text-gray-500">Loading...</p>
+      ) : schools?.length === 0 ? (
+        <EmptyState
+          title="No schools yet"
+          description="Create your first school to get started with AthleticOS."
+          action={{
+            label: '+ Create School',
+            onClick: () => setIsCreateModalOpen(true),
+          }}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {schools?.map((school) => (

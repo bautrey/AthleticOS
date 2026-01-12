@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { teamsApi } from '../api/teams';
 import { CreateTeamModal } from './CreateTeamModal';
+import { EmptyState } from './EmptyState';
 
 interface TeamsTabProps {
   schoolId: string;
@@ -31,7 +32,14 @@ export function TeamsTab({ schoolId }: TeamsTabProps) {
       {isLoading ? (
         <p className="text-gray-500">Loading...</p>
       ) : teams?.length === 0 ? (
-        <p className="text-gray-500">No teams yet. Create your first team!</p>
+        <EmptyState
+          title="No teams yet"
+          description="Create your first team to get started."
+          action={{
+            label: '+ Add Team',
+            onClick: () => setIsCreateModalOpen(true),
+          }}
+        />
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
