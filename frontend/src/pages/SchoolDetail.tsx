@@ -6,6 +6,7 @@ import { Layout } from '../components/Layout';
 import { Tabs } from '../components/Tabs';
 import { TeamsTab } from '../components/TeamsTab';
 import { FacilitiesTab } from '../components/FacilitiesTab';
+import { SeasonsTab } from '../components/SeasonsTab';
 import { schoolsApi } from '../api/schools';
 
 const TABS = [
@@ -54,7 +55,7 @@ export function SchoolDetail() {
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
         {activeTab === 'teams' && <TeamsTab schoolId={schoolId!} />}
         {activeTab === 'facilities' && <FacilitiesTab schoolId={schoolId!} />}
-        {activeTab === 'seasons' && <div>Seasons content coming soon...</div>}
+        {activeTab === 'seasons' && <SeasonsTab schoolId={schoolId!} />}
         {activeTab === 'settings' && <div>Settings content coming soon...</div>}
       </Tabs>
     </Layout>
