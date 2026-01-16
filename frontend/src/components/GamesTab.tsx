@@ -4,6 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { gamesApi, type Game } from '../api/games';
 import { CreateGameModal } from './CreateGameModal';
 import { EmptyState } from './EmptyState';
+import { ConflictBadge, ConflictDetailPanel } from './conflicts';
+import { useSeasonConflicts } from '../hooks/useConflicts';
+import type { Conflict } from '../api/conflicts';
 
 interface GamesTabProps {
   seasonId: string;
@@ -54,16 +57,41 @@ const getStatusBadgeClass = (status: Game['status']): string => {
 
 export function GamesTab({ seasonId, schoolId }: GamesTabProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<{
+    game: Game;
+    conflicts: Conflict[];
+  } | null>(null);
 
   const { data: games, isLoading } = useQuery({
     queryKey: ['games', seasonId],
     queryFn: () => gamesApi.list(seasonId),
   });
 
+  const { data: conflictSummary } = useSeasonConflicts(seasonId);
+
+  // Build a map of game ID to conflicts
+  const gameConflictsMap = new Map<string, Conflict[]>();
+  conflictSummary?.conflictingEvents
+    .filter((e) => e.type === 'game')
+    .forEach((e) => {
+      gameConflictsMap.set(e.id, e.conflicts);
+    });
+
+  const handleConflictClick = (game: Game, conflicts: Conflict[]) => {
+    setSelectedEvent({ game, conflicts });
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Games</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">Games</h2>
+          {conflictSummary && conflictSummary.gamesWithConflicts > 0 && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+              {conflictSummary.gamesWithConflicts} with conflicts
+            </span>
+          )}
+        </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
@@ -92,21 +120,34 @@ export function GamesTab({ seasonId, schoolId }: GamesTabProps) {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date/Time</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Home/Away</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Conflicts</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {games?.map((game) => (
-                <tr key={game.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{game.opponent}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(game.datetime)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{formatHomeAway(game.homeAway)}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(game.status)}`}>
-                      {game.status.charAt(0) + game.status.slice(1).toLowerCase()}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {games?.map((game) => {
+                const conflicts = gameConflictsMap.get(game.id) || [];
+                return (
+                  <tr
+                    key={game.id}
+                    className={`hover:bg-gray-50 ${conflicts.length > 0 ? 'bg-amber-50/30' : ''}`}
+                  >
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{game.opponent}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(game.datetime)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{formatHomeAway(game.homeAway)}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(game.status)}`}>
+                        {game.status.charAt(0) + game.status.slice(1).toLowerCase()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <ConflictBadge
+                        conflictCount={conflicts.length}
+                        onClick={() => handleConflictClick(game, conflicts)}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -118,6 +159,20 @@ export function GamesTab({ seasonId, schoolId }: GamesTabProps) {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
+
+      {selectedEvent && (
+        <ConflictDetailPanel
+          isOpen={true}
+          onClose={() => setSelectedEvent(null)}
+          event={{
+            type: 'game',
+            id: selectedEvent.game.id,
+            datetime: selectedEvent.game.datetime,
+            opponent: selectedEvent.game.opponent,
+          }}
+          conflicts={selectedEvent.conflicts}
+        />
+      )}
     </div>
   );
 }

@@ -52,9 +52,11 @@ model School {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  schoolUsers SchoolUser[]
-  teams       Team[]
-  facilities  Facility[]
+  schoolUsers       SchoolUser[]
+  teams             Team[]
+  facilities        Facility[]
+  blockers          Blocker[]
+  conflictOverrides ConflictOverride[]
 
   @@map("schools")
 }
@@ -70,6 +72,7 @@ model Team {
 
   school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   seasons   Season[]
+  blockers  Blocker[]
 
   @@index([schoolId])
   @@map("teams")
@@ -112,6 +115,7 @@ model Facility {
   timeSlots TimeSlot[]
   games     Game[]
   practices Practice[]
+  blockers  Blocker[]
 
   @@index([schoolId])
   @@map("facilities")
@@ -124,6 +128,22 @@ enum FacilityType {
   COURT
   TRACK
   OTHER
+}
+
+enum BlockerType {
+  EXAM
+  MAINTENANCE
+  EVENT
+  TRAVEL
+  HOLIDAY
+  WEATHER
+  CUSTOM
+}
+
+enum BlockerScope {
+  SCHOOL_WIDE
+  TEAM
+  FACILITY
 }
 
 model TimeSlot {
@@ -190,4 +210,68 @@ model Practice {
   @@index([seasonId])
   @@index([datetime])
   @@map("practices")
+}
+
+// ============ Blockers & Constraints ============
+
+model Blocker {
+  id            String       @id @default(cuid())
+  schoolId      String       @map("school_id")
+
+  // What kind of blocker
+  type          BlockerType
+  name          String
+  description   String?
+
+  // Scope: what does this blocker apply to?
+  scope         BlockerScope
+  teamId        String?      @map("team_id")
+  facilityId    String?      @map("facility_id")
+
+  // When is it blocked? (stored in UTC)
+  startDatetime DateTime     @map("start_datetime")
+  endDatetime   DateTime     @map("end_datetime")
+
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  createdBy     String       @map("created_by")
+
+  // Relations - use Restrict to prevent silent deletion
+  school        School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  team          Team?        @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  facility      Facility?    @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+
+  @@index([schoolId])
+  @@index([startDatetime, endDatetime])
+  @@map("blockers")
+}
+
+// ============ Conflict Tracking ============
+
+enum EventType {
+  GAME
+  PRACTICE
+}
+
+model ConflictOverride {
+  id        String   @id @default(cuid())
+  schoolId  String   @map("school_id")
+
+  // What was overridden
+  eventType EventType  @map("event_type")
+  eventId   String     @map("event_id")
+  blockerId String     @map("blocker_id")
+
+  // Who and when
+  overriddenBy String   @map("overridden_by")
+  overriddenAt DateTime @default(now()) @map("overridden_at")
+
+  // Context
+  reason    String?
+
+  school    School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([eventId])
+  @@map("conflict_overrides")
 }

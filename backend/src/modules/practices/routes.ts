@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { authenticate } from '../../common/middleware/auth.js';
 import { createPracticeSchema, updatePracticeSchema } from './schemas.js';
 import { practicesService } from './service.js';
+import { conflictService } from '../conflicts/service.js';
 
 export async function practicesRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -19,7 +20,22 @@ export async function practicesRoutes(app: FastifyInstance) {
     const { seasonId } = request.params as { seasonId: string };
     const input = createPracticeSchema.parse(request.body);
     const practice = await practicesService.create(seasonId, input);
-    return reply.status(201).send({ data: practice });
+
+    // Check for conflicts
+    const conflictResult = await conflictService.checkEventConflicts({
+      datetime: practice.datetime,
+      durationMinutes: practice.durationMinutes,
+      seasonId: practice.seasonId,
+      facilityId: practice.facilityId,
+    });
+
+    return reply.status(201).send({
+      data: practice,
+      meta: {
+        conflicts: conflictResult.conflicts,
+        hasConflicts: conflictResult.hasConflicts,
+      },
+    });
   });
 
   // Get practice by ID
@@ -34,7 +50,22 @@ export async function practicesRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const input = updatePracticeSchema.parse(request.body);
     const practice = await practicesService.update(id, input);
-    return { data: practice };
+
+    // Check for conflicts after update
+    const conflictResult = await conflictService.checkEventConflicts({
+      datetime: practice.datetime,
+      durationMinutes: practice.durationMinutes,
+      seasonId: practice.seasonId,
+      facilityId: practice.facilityId,
+    });
+
+    return {
+      data: practice,
+      meta: {
+        conflicts: conflictResult.conflicts,
+        hasConflicts: conflictResult.hasConflicts,
+      },
+    };
   });
 
   // Delete practice

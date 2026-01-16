@@ -12,6 +12,8 @@ import { seasonsRoutes } from './modules/seasons/routes.js';
 import { facilitiesRoutes } from './modules/facilities/routes.js';
 import { gamesRoutes } from './modules/games/routes.js';
 import { practicesRoutes } from './modules/practices/routes.js';
+import { blockersRoutes } from './modules/blockers/routes.js';
+import { conflictsRoutes } from './modules/conflicts/routes.js';
 import { AppError } from './common/errors.js';
 import { ZodError } from 'zod';
 
@@ -63,6 +65,8 @@ await app.register(async (api) => {
   await api.register(facilitiesRoutes);
   await api.register(gamesRoutes);
   await api.register(practicesRoutes);
+  await api.register(blockersRoutes);
+  await api.register(conflictsRoutes);
 }, { prefix: '/api/v1' });
 
 // Start

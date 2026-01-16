@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { authenticate } from '../../common/middleware/auth.js';
 import { createGameSchema, updateGameSchema } from './schemas.js';
 import { gamesService } from './service.js';
+import { conflictService } from '../conflicts/service.js';
 
 export async function gamesRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -19,7 +20,21 @@ export async function gamesRoutes(app: FastifyInstance) {
     const { seasonId } = request.params as { seasonId: string };
     const input = createGameSchema.parse(request.body);
     const game = await gamesService.create(seasonId, input);
-    return reply.status(201).send({ data: game });
+
+    // Check for conflicts
+    const conflictResult = await conflictService.checkEventConflicts({
+      datetime: game.datetime,
+      seasonId: game.seasonId,
+      facilityId: game.facilityId,
+    });
+
+    return reply.status(201).send({
+      data: game,
+      meta: {
+        conflicts: conflictResult.conflicts,
+        hasConflicts: conflictResult.hasConflicts,
+      },
+    });
   });
 
   // Get game by ID
@@ -34,7 +49,21 @@ export async function gamesRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const input = updateGameSchema.parse(request.body);
     const game = await gamesService.update(id, input);
-    return { data: game };
+
+    // Check for conflicts after update
+    const conflictResult = await conflictService.checkEventConflicts({
+      datetime: game.datetime,
+      seasonId: game.seasonId,
+      facilityId: game.facilityId,
+    });
+
+    return {
+      data: game,
+      meta: {
+        conflicts: conflictResult.conflicts,
+        hasConflicts: conflictResult.hasConflicts,
+      },
+    };
   });
 
   // Delete game
