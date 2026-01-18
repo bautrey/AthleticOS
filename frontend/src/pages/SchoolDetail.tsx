@@ -51,8 +51,18 @@ export function SchoolDetail() {
           <span className="mx-2 text-gray-400">/</span>
           <span className="text-gray-900">{school.name}</span>
         </nav>
-        <h1 className="text-2xl font-bold">{school.name}</h1>
-        <p className="text-gray-500">{school.timezone}</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold">{school.name}</h1>
+            <p className="text-gray-500">{school.timezone}</p>
+          </div>
+          <Link
+            to={`/schools/${schoolId}/blockers`}
+            className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Manage Blockers
+          </Link>
+        </div>
       </div>
 
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
