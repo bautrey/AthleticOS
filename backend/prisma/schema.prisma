@@ -97,6 +97,7 @@ model Season {
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   games     Game[]
   practices Practice[]
+  shares    ScheduleShare[]
 
   @@index([teamId])
   @@map("seasons")
@@ -274,4 +275,35 @@ model ConflictOverride {
   @@index([schoolId])
   @@index([eventId])
   @@map("conflict_overrides")
+}
+
+// ============ Schedule Sharing ============
+
+model ScheduleShare {
+  id          String    @id @default(cuid())
+  seasonId    String    @map("season_id")
+
+  // Share token (used in URL)
+  token       String    @unique @default(cuid())
+
+  // Display settings
+  title       String?
+  showNotes   Boolean   @default(false) @map("show_notes")
+  showFacility Boolean  @default(true) @map("show_facility")
+
+  // Access control
+  isActive    Boolean   @default(true) @map("is_active")
+  expiresAt   DateTime? @map("expires_at")
+
+  // Tracking (incremented atomically)
+  viewCount   Int       @default(0) @map("view_count")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdBy   String    @map("created_by")
+
+  // Relations - Restrict deletion, handle in service layer
+  season      Season    @relation(fields: [seasonId], references: [id], onDelete: Restrict)
+
+  @@index([token])
+  @@index([seasonId])
+  @@map("schedule_shares")
 }

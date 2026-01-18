@@ -14,6 +14,9 @@ import { gamesRoutes } from './modules/games/routes.js';
 import { practicesRoutes } from './modules/practices/routes.js';
 import { blockersRoutes } from './modules/blockers/routes.js';
 import { conflictsRoutes } from './modules/conflicts/routes.js';
+import { importRoutes } from './modules/import/routes.js';
+import { sharesRoutes } from './modules/shares/routes.js';
+import { publicScheduleRoutes } from './modules/shares/public-routes.js';
 import { AppError } from './common/errors.js';
 import { ZodError } from 'zod';
 
@@ -56,7 +59,10 @@ await app.register(swaggerUi, { routePrefix: '/docs' });
 // Health check
 app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// API routes
+// Public routes (no auth required, rate limited)
+await app.register(publicScheduleRoutes, { prefix: '/api/v1' });
+
+// API routes (auth required)
 await app.register(async (api) => {
   await api.register(authRoutes);
   await api.register(schoolsRoutes);
@@ -67,6 +73,8 @@ await app.register(async (api) => {
   await api.register(practicesRoutes);
   await api.register(blockersRoutes);
   await api.register(conflictsRoutes);
+  await api.register(importRoutes);
+  await api.register(sharesRoutes);
 }, { prefix: '/api/v1' });
 
 // Start

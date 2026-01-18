@@ -7,6 +7,9 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { SchoolDetail } from './pages/SchoolDetail';
 import { SeasonDetail } from './pages/SeasonDetail';
+import { BlockersPage } from './pages/BlockersPage';
+import { PublicSchedulePage } from './pages/PublicSchedulePage';
+import { PublicScheduleEmbed } from './pages/PublicScheduleEmbed';
 
 const queryClient = new QueryClient();
 
@@ -23,10 +26,18 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Public routes (no auth required) */}
+      <Route path="/s/:token" element={<PublicSchedulePage />} />
+      <Route path="/s/:token/embed" element={<PublicScheduleEmbed />} />
+
+      {/* Auth routes */}
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+
+      {/* Protected routes */}
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/schools/:schoolId" element={<ProtectedRoute><SchoolDetail /></ProtectedRoute>} />
+      <Route path="/schools/:schoolId/blockers" element={<ProtectedRoute><BlockersPage /></ProtectedRoute>} />
       <Route path="/schools/:schoolId/seasons/:seasonId" element={<ProtectedRoute><SeasonDetail /></ProtectedRoute>} />
     </Routes>
   );
