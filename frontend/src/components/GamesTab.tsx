@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { gamesApi, type Game } from '../api/games';
 import { CreateGameModal } from './CreateGameModal';
+import { EditGameModal } from './EditGameModal';
 import { EmptyState } from './EmptyState';
 import { ConflictBadge, ConflictDetailPanel } from './conflicts';
 import { useSeasonConflicts } from '../hooks/useConflicts';
@@ -57,6 +58,7 @@ const getStatusBadgeClass = (status: Game['status']): string => {
 
 export function GamesTab({ seasonId, schoolId }: GamesTabProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<{
     game: Game;
     conflicts: Conflict[];
@@ -129,7 +131,8 @@ export function GamesTab({ seasonId, schoolId }: GamesTabProps) {
                 return (
                   <tr
                     key={game.id}
-                    className={`hover:bg-gray-50 ${conflicts.length > 0 ? 'bg-amber-50/30' : ''}`}
+                    onClick={() => setEditingGame(game)}
+                    className={`hover:bg-gray-50 cursor-pointer ${conflicts.length > 0 ? 'bg-amber-50/30' : ''}`}
                   >
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{game.opponent}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(game.datetime)}</td>
@@ -159,6 +162,15 @@ export function GamesTab({ seasonId, schoolId }: GamesTabProps) {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
+
+      {editingGame && (
+        <EditGameModal
+          game={editingGame}
+          schoolId={schoolId}
+          isOpen={true}
+          onClose={() => setEditingGame(null)}
+        />
+      )}
 
       {selectedEvent && (
         <ConflictDetailPanel

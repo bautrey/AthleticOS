@@ -9,6 +9,9 @@ import { FacilitiesTab } from '../components/FacilitiesTab';
 import { SeasonsTab } from '../components/SeasonsTab';
 import { SettingsTab } from '../components/SettingsTab';
 import { schoolsApi } from '../api/schools';
+import { teamsApi } from '../api/teams';
+import { seasonsApi } from '../api/seasons';
+import { conflictsApi } from '../api/conflicts';
 
 const TABS = [
   { id: 'teams', label: 'Teams' },
@@ -26,6 +29,28 @@ export function SchoolDetail() {
     queryFn: () => schoolsApi.get(schoolId!),
     enabled: !!schoolId,
   });
+
+  const { data: teams } = useQuery({
+    queryKey: ['teams', schoolId],
+    queryFn: () => teamsApi.list(schoolId!),
+    enabled: !!schoolId,
+  });
+
+  const { data: seasons } = useQuery({
+    queryKey: ['seasons', schoolId],
+    queryFn: () => seasonsApi.list(schoolId!),
+    enabled: !!schoolId,
+  });
+
+  const { data: conflictSummary } = useQuery({
+    queryKey: ['school-conflict-summary', schoolId],
+    queryFn: () => conflictsApi.getSchoolConflictSummary(schoolId!),
+    enabled: !!schoolId,
+  });
+
+  const teamsCount = teams?.length ?? 0;
+  const seasonsCount = seasons?.length ?? 0;
+  const conflictsCount = conflictSummary?.totalConflicts ?? 0;
 
   if (isLoading) {
     return (
@@ -63,6 +88,33 @@ export function SchoolDetail() {
             Manage Blockers
           </Link>
         </div>
+      </div>
+
+      {/* Stats Bar */}
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-2xl font-semibold text-gray-900">{teamsCount}</div>
+          <div className="text-sm text-gray-500">Teams</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-2xl font-semibold text-gray-900">{seasonsCount}</div>
+          <div className="text-sm text-gray-500">Active Seasons</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className={`text-2xl font-semibold ${conflictsCount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+            {conflictsCount}
+          </div>
+          <div className="text-sm text-gray-500">Conflicts</div>
+        </div>
+        <Link
+          to={`/schools/${schoolId}/blockers`}
+          className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+        >
+          <div className="text-2xl font-semibold text-blue-600">
+            {conflictSummary?.recentlyCreated?.length ?? 0}
+          </div>
+          <div className="text-sm text-gray-500">Active Blockers</div>
+        </Link>
       </div>
 
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>

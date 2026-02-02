@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { practicesApi, type Practice } from '../api/practices';
 import { facilitiesApi, type Facility } from '../api/facilities';
 import { CreatePracticeModal } from './CreatePracticeModal';
+import { EditPracticeModal } from './EditPracticeModal';
 import { EmptyState } from './EmptyState';
 import { ConflictBadge, ConflictDetailPanel } from './conflicts';
 import { useSeasonConflicts } from '../hooks/useConflicts';
@@ -40,6 +41,7 @@ const formatDuration = (minutes: number): string => {
 
 export function PracticesTab({ seasonId, schoolId }: PracticesTabProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingPractice, setEditingPractice] = useState<Practice | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<{
     practice: Practice;
     conflicts: Conflict[];
@@ -128,7 +130,8 @@ export function PracticesTab({ seasonId, schoolId }: PracticesTabProps) {
                 return (
                   <tr
                     key={practice.id}
-                    className={`hover:bg-gray-50 ${conflicts.length > 0 ? 'bg-amber-50/30' : ''}`}
+                    onClick={() => setEditingPractice(practice)}
+                    className={`hover:bg-gray-50 cursor-pointer ${conflicts.length > 0 ? 'bg-amber-50/30' : ''}`}
                   >
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {formatDateTime(practice.datetime)}
@@ -162,6 +165,15 @@ export function PracticesTab({ seasonId, schoolId }: PracticesTabProps) {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
+
+      {editingPractice && (
+        <EditPracticeModal
+          practice={editingPractice}
+          schoolId={schoolId}
+          isOpen={true}
+          onClose={() => setEditingPractice(null)}
+        />
+      )}
 
       {selectedEvent && (
         <ConflictDetailPanel

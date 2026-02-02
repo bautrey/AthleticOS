@@ -6,21 +6,29 @@ import { Layout } from '../components/Layout';
 import { Tabs } from '../components/Tabs';
 import { GamesTab } from '../components/GamesTab';
 import { PracticesTab } from '../components/PracticesTab';
+import { CalendarTab } from '../components/CalendarTab';
+import { EditGameModal } from '../components/EditGameModal';
+import { EditPracticeModal } from '../components/EditPracticeModal';
 import { ImportScheduleModal } from '../components/ImportScheduleModal';
 import { ShareScheduleModal } from '../components/ShareScheduleModal';
 import { seasonsApi } from '../api/seasons';
 import { schoolsApi } from '../api/schools';
+import type { Game } from '../api/games';
+import type { Practice } from '../api/practices';
 
 const TABS = [
+  { id: 'calendar', label: 'Calendar' },
   { id: 'games', label: 'Games' },
   { id: 'practices', label: 'Practices' },
 ];
 
 export function SeasonDetail() {
   const { schoolId, seasonId } = useParams<{ schoolId: string; seasonId: string }>();
-  const [activeTab, setActiveTab] = useState('games');
+  const [activeTab, setActiveTab] = useState('calendar');
   const [showImportModal, setShowImportModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [editingGame, setEditingGame] = useState<Game | null>(null);
+  const [editingPractice, setEditingPractice] = useState<Practice | null>(null);
 
   const { data: school, isLoading: isLoadingSchool } = useQuery({
     queryKey: ['school', schoolId],
@@ -104,6 +112,14 @@ export function SeasonDetail() {
       </div>
 
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
+        {activeTab === 'calendar' && (
+          <CalendarTab
+            seasonId={seasonId!}
+            schoolId={schoolId!}
+            onEditGame={setEditingGame}
+            onEditPractice={setEditingPractice}
+          />
+        )}
         {activeTab === 'games' && (
           <GamesTab seasonId={seasonId!} schoolId={schoolId!} />
         )}
@@ -125,6 +141,24 @@ export function SeasonDetail() {
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
       />
+
+      {editingGame && (
+        <EditGameModal
+          game={editingGame}
+          schoolId={schoolId!}
+          isOpen={true}
+          onClose={() => setEditingGame(null)}
+        />
+      )}
+
+      {editingPractice && (
+        <EditPracticeModal
+          practice={editingPractice}
+          schoolId={schoolId!}
+          isOpen={true}
+          onClose={() => setEditingPractice(null)}
+        />
+      )}
     </Layout>
   );
 }
