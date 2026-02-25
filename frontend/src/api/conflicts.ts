@@ -59,7 +59,49 @@ export interface CreateOverrideInput {
   reason?: string;
 }
 
+export interface ConflictListItem {
+  type: 'game' | 'practice';
+  id: string;
+  datetime: string;
+  opponent?: string;
+  teamName: string;
+  teamLevel: string;
+  facilityName: string | null;
+  seasonId: string;
+  conflicts: Conflict[];
+  overrideCount: number;
+}
+
+export interface ConflictListResponse {
+  data: ConflictListItem[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+  summary: { total: number; byBlockerType: Record<string, number> };
+}
+
+export interface ConflictListQuery {
+  page?: number;
+  limit?: number;
+  eventType?: 'game' | 'practice';
+  blockerType?: BlockerType;
+  sortBy?: 'datetime' | 'blockerType';
+  sortOrder?: 'asc' | 'desc';
+}
+
 export const conflictsApi = {
+  // List all conflicts for a school (paginated)
+  listConflicts: async (schoolId: string, query?: ConflictListQuery): Promise<ConflictListResponse> => {
+    const params = new URLSearchParams();
+    if (query?.page) params.append('page', String(query.page));
+    if (query?.limit) params.append('limit', String(query.limit));
+    if (query?.eventType) params.append('eventType', query.eventType);
+    if (query?.blockerType) params.append('blockerType', query.blockerType);
+    if (query?.sortBy) params.append('sortBy', query.sortBy);
+    if (query?.sortOrder) params.append('sortOrder', query.sortOrder);
+    const qs = params.toString();
+    const { data } = await api.get(`/schools/${schoolId}/conflicts${qs ? `?${qs}` : ''}`);
+    return data;
+  },
+
   // Check conflicts for a specific game
   checkGameConflicts: async (gameId: string): Promise<ConflictCheckResult> => {
     const { data } = await api.get(`/games/${gameId}/conflicts`);

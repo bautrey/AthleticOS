@@ -81,12 +81,20 @@ export function SchoolDetail() {
             <h1 className="text-2xl font-bold">{school.name}</h1>
             <p className="text-gray-500">{school.timezone}</p>
           </div>
-          <Link
-            to={`/schools/${schoolId}/blockers`}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
-          >
-            Manage Blockers
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              to={`/schools/${schoolId}/settings/priority-rules`}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Priority Rules
+            </Link>
+            <Link
+              to={`/schools/${schoolId}/blockers`}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Manage Blockers
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -100,12 +108,15 @@ export function SchoolDetail() {
           <div className="text-2xl font-semibold text-gray-900">{seasonsCount}</div>
           <div className="text-sm text-gray-500">Active Seasons</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <Link
+          to={`/schools/${schoolId}/conflicts`}
+          className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+        >
           <div className={`text-2xl font-semibold ${conflictsCount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
             {conflictsCount}
           </div>
           <div className="text-sm text-gray-500">Conflicts</div>
-        </div>
+        </Link>
         <Link
           to={`/schools/${schoolId}/blockers`}
           className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"

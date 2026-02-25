@@ -1,6 +1,7 @@
 // frontend/src/components/Layout.tsx
 import { type ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
+import { IdeasWidget } from './IdeasWidget';
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ export function Layout({ children }: LayoutProps) {
       <main className="flex-1 p-8">
         {children}
       </main>
+      <IdeasWidget />
     </div>
   );
 }

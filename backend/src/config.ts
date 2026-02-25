@@ -9,6 +9,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(8000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PUBLIC_URL: z.string().default('http://localhost:3005'),
+  IDEAS_API_URL: z.string().default('https://ideas.fortiumsoftware.com'),
+  IDEAS_API_KEY: z.string().default(''),
 });
 
 export const config = envSchema.parse(process.env);

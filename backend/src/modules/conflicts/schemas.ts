@@ -9,3 +9,14 @@ export const createOverrideSchema = z.object({
 });
 
 export type CreateOverrideInput = z.infer<typeof createOverrideSchema>;
+
+export const conflictsListQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(25),
+  eventType: z.enum(['game', 'practice']).optional(),
+  blockerType: z.enum(['EXAM', 'MAINTENANCE', 'EVENT', 'TRAVEL', 'HOLIDAY', 'WEATHER', 'CUSTOM']).optional(),
+  sortBy: z.enum(['datetime', 'blockerType']).default('datetime'),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+});
+
+export type ConflictsListQuery = z.infer<typeof conflictsListQuerySchema>;

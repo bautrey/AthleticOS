@@ -355,6 +355,161 @@ export const conflictService = {
   },
 
   /**
+   * List all conflicting events for a school (paginated, for conflicts triage page)
+   */
+  async listAllConflicts(
+    schoolId: string,
+    options: {
+      page: number;
+      limit: number;
+      eventType?: 'game' | 'practice';
+      blockerType?: string;
+      sortBy: string;
+      sortOrder: 'asc' | 'desc';
+    }
+  ): Promise<{
+    data: Array<{
+      type: 'game' | 'practice';
+      id: string;
+      datetime: Date;
+      opponent?: string;
+      teamName: string;
+      teamLevel: string;
+      facilityName: string | null;
+      seasonId: string;
+      conflicts: Conflict[];
+      overrideCount: number;
+    }>;
+    meta: { page: number; limit: number; total: number; totalPages: number };
+    summary: { total: number; byBlockerType: Record<string, number> };
+  }> {
+    const { page, limit, eventType, blockerType, sortBy, sortOrder } = options;
+
+    // Get all seasons for this school
+    const seasons = await prisma.season.findMany({
+      where: { team: { schoolId } },
+      include: {
+        team: { select: { name: true, level: true } },
+        games: {
+          include: { facility: { select: { name: true } } },
+          orderBy: { datetime: sortOrder },
+        },
+        practices: {
+          include: { facility: { select: { name: true } } },
+          orderBy: { datetime: sortOrder },
+        },
+      },
+    });
+
+    // Check each event for conflicts
+    const allConflicting: Array<{
+      type: 'game' | 'practice';
+      id: string;
+      datetime: Date;
+      opponent?: string;
+      teamName: string;
+      teamLevel: string;
+      facilityName: string | null;
+      seasonId: string;
+      conflicts: Conflict[];
+      overrideCount: number;
+    }> = [];
+
+    for (const season of seasons) {
+      if (!eventType || eventType === 'game') {
+        for (const game of season.games) {
+          const result = await this.checkEventConflicts({
+            datetime: game.datetime,
+            seasonId: season.id,
+            facilityId: game.facilityId,
+          });
+          if (result.hasConflicts) {
+            const filtered = blockerType
+              ? result.conflicts.filter((c) => c.blockerType === blockerType)
+              : result.conflicts;
+            if (filtered.length > 0) {
+              const overrides = await prisma.conflictOverride.count({
+                where: { eventType: 'GAME', eventId: game.id },
+              });
+              allConflicting.push({
+                type: 'game',
+                id: game.id,
+                datetime: game.datetime,
+                opponent: game.opponent,
+                teamName: season.team.name,
+                teamLevel: season.team.level,
+                facilityName: game.facility?.name ?? null,
+                seasonId: season.id,
+                conflicts: filtered,
+                overrideCount: overrides,
+              });
+            }
+          }
+        }
+      }
+
+      if (!eventType || eventType === 'practice') {
+        for (const practice of season.practices) {
+          const result = await this.checkEventConflicts({
+            datetime: practice.datetime,
+            durationMinutes: practice.durationMinutes,
+            seasonId: season.id,
+            facilityId: practice.facilityId,
+          });
+          if (result.hasConflicts) {
+            const filtered = blockerType
+              ? result.conflicts.filter((c) => c.blockerType === blockerType)
+              : result.conflicts;
+            if (filtered.length > 0) {
+              const overrides = await prisma.conflictOverride.count({
+                where: { eventType: 'PRACTICE', eventId: practice.id },
+              });
+              allConflicting.push({
+                type: 'practice',
+                id: practice.id,
+                datetime: practice.datetime,
+                teamName: season.team.name,
+                teamLevel: season.team.level,
+                facilityName: practice.facility?.name ?? null,
+                seasonId: season.id,
+                conflicts: filtered,
+                overrideCount: overrides,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Sort
+    if (sortBy === 'datetime') {
+      allConflicting.sort((a, b) => {
+        const diff = a.datetime.getTime() - b.datetime.getTime();
+        return sortOrder === 'asc' ? diff : -diff;
+      });
+    }
+
+    // Build summary
+    const byBlockerType: Record<string, number> = {};
+    for (const event of allConflicting) {
+      for (const c of event.conflicts) {
+        byBlockerType[c.blockerType] = (byBlockerType[c.blockerType] || 0) + 1;
+      }
+    }
+
+    // Paginate
+    const total = allConflicting.length;
+    const start = (page - 1) * limit;
+    const paginated = allConflicting.slice(start, start + limit);
+
+    return {
+      data: paginated,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      summary: { total, byBlockerType },
+    };
+  },
+
+  /**
    * Create a conflict override (when coach saves despite conflict)
    */
   async createOverride(
