@@ -3,7 +3,7 @@
 > Status: Draft
 > PRD: [PRD-002 (F5 - scaffolding only)](../prd/v2-athletic-operations.md#f5-role-based-dashboards)
 > Created: 2026-02-19
-> Last Updated: 2026-02-19
+> Last Updated: 2026-02-25
 
 ## Overview
 
@@ -856,6 +856,85 @@ export function authorize(allowedRoles: string[]) {
 | GET /feedback (admin queue) | X | X | - | - | - | - | - |
 
 Note: AD = ATHLETIC_DIRECTOR, COORD = COORDINATOR, HOS = HEAD_OF_SCHOOL
+
+---
+
+## Conflict Resolution Page (Added 2026-02-25)
+
+### Context
+
+The "X conflicts" stat card on SchoolDetail was previously a dead `<div>`. The conflict detection backend is fully built (service, routes, override model), and frontend has ConflictBadge, ConflictDetailPanel, and ConflictWarningModal. What was missing is a **dedicated conflicts page** for triage. This section was absorbed from TRD-006 scope revision.
+
+### New Route
+
+`/schools/:schoolId/conflicts` -- dedicated conflict resolution/triage page.
+
+### Backend
+
+**New endpoint:** `GET /api/v1/schools/:schoolId/conflicts`
+
+Paginated list of all conflicting events with blocker details. Combines existing `checkEventConflicts` per-event with school-wide season traversal. Supports filtering by event type and blocker type, sorting by datetime.
+
+**Response shape:**
+```json
+{
+  "data": [
+    {
+      "type": "game",
+      "id": "clx...",
+      "datetime": "2026-02-22T18:00:00Z",
+      "opponent": "Rival High",
+      "teamName": "Varsity Basketball",
+      "teamLevel": "VARSITY",
+      "facilityName": "Main Gymnasium",
+      "seasonId": "clx...",
+      "conflicts": [ { "blockerId": "...", "blockerName": "...", "blockerType": "WEATHER", ... } ],
+      "overrideCount": 0
+    }
+  ],
+  "meta": { "page": 1, "limit": 25, "total": 12, "totalPages": 1 },
+  "summary": { "total": 12, "byBlockerType": { "WEATHER": 5, "EXAM": 7 } }
+}
+```
+
+**Query parameters:** `page`, `limit`, `eventType` (game/practice), `blockerType`, `sortBy` (datetime), `sortOrder` (asc/desc)
+
+### Frontend
+
+**New files:**
+- `frontend/src/pages/ConflictsPage.tsx` -- Main page with filters, summary cards, paginated list
+- `frontend/src/components/conflicts/ConflictsList.tsx` -- Table of conflicting events
+- `frontend/src/components/conflicts/ConflictRow.tsx` -- Individual row with detail panel and override actions
+
+**Modified files:**
+- `frontend/src/pages/SchoolDetail.tsx` -- Conflicts stat card is now a clickable `<Link>` to `/schools/:schoolId/conflicts`
+- `frontend/src/App.tsx` -- Added `/schools/:schoolId/conflicts` route
+- `frontend/src/api/conflicts.ts` -- Added `listConflicts()` function and types
+- `frontend/src/hooks/useConflicts.ts` -- Added `useConflictList()` hook
+
+**Page design:**
+- Summary header: total conflicts count + breakdown by blocker type
+- Filter bar: event type, blocker type, sort order
+- Table with columns: Type, Team, Date/Time, Opponent, Facility, Conflicts (count badge), Actions
+- Click conflict count to see ConflictDetailPanel (reused)
+- Actions: "Reschedule" (links to season detail), "Override" (uses ConflictWarningModal + createOverride API)
+- Pagination controls
+- Empty state with green checkmark when no conflicts
+
+### Conflict Resolution Tasks
+
+| # | Task | Estimate | Status |
+|---|------|----------|--------|
+| 32 | Backend: add `listAllConflicts` to conflict service | 2h | [x] |
+| 33 | Backend: add `GET /schools/:schoolId/conflicts` route | 0.5h | [x] |
+| 34 | Backend: add query schema for conflicts list endpoint | 0.5h | [x] |
+| 35 | Frontend: add `listConflicts` to conflicts API client | 0.5h | [x] |
+| 36 | Frontend: add `useConflictList` hook | 0.5h | [x] |
+| 37 | Frontend: create `ConflictRow.tsx` component | 1.5h | [x] |
+| 38 | Frontend: create `ConflictsList.tsx` component | 1h | [x] |
+| 39 | Frontend: create `ConflictsPage.tsx` | 2h | [x] |
+| 40 | Frontend: make SchoolDetail conflicts card a Link | 0.5h | [x] |
+| 41 | Frontend: add conflicts route to App.tsx | 0.5h | [x] |
 
 ---
 

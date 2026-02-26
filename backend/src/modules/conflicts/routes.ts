@@ -2,7 +2,7 @@
 import type { FastifyInstance } from 'fastify';
 import { authenticate } from '../../common/middleware/auth.js';
 import { prisma } from '../../common/db.js';
-import { createOverrideSchema } from './schemas.js';
+import { createOverrideSchema, conflictsListQuerySchema } from './schemas.js';
 import { conflictService } from './service.js';
 
 export async function conflictsRoutes(app: FastifyInstance) {
@@ -34,6 +34,14 @@ export async function conflictsRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const result = await conflictService.findConflictingEvents(id);
     return { data: result };
+  });
+
+  // List all conflicts for a school (paginated, for triage page)
+  app.get('/schools/:schoolId/conflicts', async (request) => {
+    const { schoolId } = request.params as { schoolId: string };
+    const query = conflictsListQuerySchema.parse(request.query);
+    const result = await conflictService.listAllConflicts(schoolId, query);
+    return result;
   });
 
   // Get school-wide conflict summary (dashboard)

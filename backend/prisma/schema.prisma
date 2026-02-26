@@ -57,6 +57,7 @@ model School {
   facilities        Facility[]
   blockers          Blocker[]
   conflictOverrides ConflictOverride[]
+  priorityRule      PriorityRule?
 
   @@map("schools")
 }
@@ -306,4 +307,49 @@ model ScheduleShare {
   @@index([token])
   @@index([seasonId])
   @@map("schedule_shares")
+}
+
+// ============ Priority Rules ============
+
+model PriorityRule {
+  id        String   @id @default(cuid())
+  schoolId  String   @unique @map("school_id")
+
+  // Weights (0-100, must sum to 100)
+  teamLevelWeight    Int @default(30) @map("team_level_weight")
+  seasonStatusWeight Int @default(25) @map("season_status_weight")
+  eventTypeWeight    Int @default(25) @map("event_type_weight")
+  homeAwayWeight     Int @default(20) @map("home_away_weight")
+
+  // Per-factor scores (JSON objects mapping enum values to scores 0-100)
+  teamLevelScores    Json @default("{\"VARSITY\":100,\"JV\":60,\"FRESHMAN\":30}") @map("team_level_scores")
+  seasonStatusScores Json @default("{\"IN_SEASON\":100,\"OFF_SEASON\":30}") @map("season_status_scores")
+  eventTypeScores    Json @default("{\"GAME\":100,\"PRACTICE\":40}") @map("event_type_scores")
+  homeAwayScores     Json @default("{\"HOME\":100,\"AWAY\":20,\"NEUTRAL\":50}") @map("home_away_scores")
+
+  // Facility-specific overrides (optional)
+  facilityOverrides  Json @default("{}") @map("facility_overrides")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  audits    PriorityRuleAudit[]
+
+  @@map("priority_rules")
+}
+
+model PriorityRuleAudit {
+  id             String   @id @default(cuid())
+  priorityRuleId String   @map("priority_rule_id")
+  changedBy      String   @map("changed_by")
+  changedAt      DateTime @default(now()) @map("changed_at")
+  fieldChanged   String   @map("field_changed")
+  oldValue       Json     @map("old_value")
+  newValue       Json     @map("new_value")
+
+  priorityRule   PriorityRule @relation(fields: [priorityRuleId], references: [id], onDelete: Cascade)
+
+  @@index([priorityRuleId])
+  @@map("priority_rule_audits")
 }

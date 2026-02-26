@@ -8,8 +8,10 @@ import { Dashboard } from './pages/Dashboard';
 import { SchoolDetail } from './pages/SchoolDetail';
 import { SeasonDetail } from './pages/SeasonDetail';
 import { BlockersPage } from './pages/BlockersPage';
+import { PriorityRulesPage } from './pages/PriorityRulesPage';
 import { PublicSchedulePage } from './pages/PublicSchedulePage';
 import { PublicScheduleEmbed } from './pages/PublicScheduleEmbed';
+import { ConflictsPage } from './pages/ConflictsPage';
 
 const queryClient = new QueryClient();
 
@@ -38,6 +40,8 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/schools/:schoolId" element={<ProtectedRoute><SchoolDetail /></ProtectedRoute>} />
       <Route path="/schools/:schoolId/blockers" element={<ProtectedRoute><BlockersPage /></ProtectedRoute>} />
+      <Route path="/schools/:schoolId/conflicts" element={<ProtectedRoute><ConflictsPage /></ProtectedRoute>} />
+      <Route path="/schools/:schoolId/settings/priority-rules" element={<ProtectedRoute><PriorityRulesPage /></ProtectedRoute>} />
       <Route path="/schools/:schoolId/seasons/:seasonId" element={<ProtectedRoute><SeasonDetail /></ProtectedRoute>} />
     </Routes>
   );

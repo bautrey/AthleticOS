@@ -3,7 +3,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   conflictsApi,
   type CreateOverrideInput,
+  type ConflictListQuery,
 } from '../api/conflicts';
+
+// List all conflicts for a school (paginated)
+export function useConflictList(schoolId: string, query?: ConflictListQuery) {
+  return useQuery({
+    queryKey: ['conflicts', 'list', schoolId, query],
+    queryFn: () => conflictsApi.listConflicts(schoolId, query),
+    enabled: !!schoolId,
+  });
+}
 
 // Check conflicts for a specific game
 export function useGameConflicts(gameId: string | null) {
