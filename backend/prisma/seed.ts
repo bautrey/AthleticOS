@@ -18,7 +18,7 @@ async function main() {
   // Create school
   const school = await prisma.school.create({
     data: {
-      name: 'Westlake High School',
+      name: 'Trinity Christian Academy',
       timezone: 'America/Chicago',
       settings: {},
     },
@@ -71,17 +71,17 @@ async function main() {
   const [vFootball, jvFootball, vBBoys, vBGirls, jvBBoys, vBaseball, vVolleyball, vSwimming, vTrack, vTennis, vSoccerB, vSoccerG] = teams;
 
   // Create seasons (Spring 2026 for spring sports, Fall 2025 already happened)
-  const now = new Date('2026-02-18');
+  const now = new Date('2026-02-27');
 
   // Basketball season (current - wrapping up)
   const bbSeason = await prisma.season.create({
-    data: { teamId: vBBoys.id, name: 'Basketball 2025-26', year: 2026, startDate: new Date('2025-11-10'), endDate: new Date('2026-03-01') },
+    data: { teamId: vBBoys.id, name: 'Basketball 2025-26', year: 2026, startDate: new Date('2025-11-10'), endDate: new Date('2026-03-21') },
   });
   const bbGirlsSeason = await prisma.season.create({
-    data: { teamId: vBGirls.id, name: 'Basketball 2025-26', year: 2026, startDate: new Date('2025-11-10'), endDate: new Date('2026-03-01') },
+    data: { teamId: vBGirls.id, name: 'Basketball 2025-26', year: 2026, startDate: new Date('2025-11-10'), endDate: new Date('2026-03-21') },
   });
   const jvBBSeason = await prisma.season.create({
-    data: { teamId: jvBBoys.id, name: 'JV Basketball 2025-26', year: 2026, startDate: new Date('2025-11-10'), endDate: new Date('2026-03-01') },
+    data: { teamId: jvBBoys.id, name: 'JV Basketball 2025-26', year: 2026, startDate: new Date('2025-11-10'), endDate: new Date('2026-03-21') },
   });
 
   // Spring sports
@@ -102,9 +102,9 @@ async function main() {
   });
 
   // Games - Basketball boys (remaining schedule)
-  const bbOpponents = ['Lake Travis', 'Dripping Springs', 'Hays', 'Del Valle', 'Bowie', 'Anderson', 'Akins'];
+  const bbOpponents = ['Fort Worth Christian', 'Dallas Christian', 'Covenant Christian', 'Heritage Christian', 'Grace Prep', 'Grapevine Faith', 'Prestonwood Christian'];
   for (let i = 0; i < bbOpponents.length; i++) {
-    const gameDate = new Date('2026-02-19');
+    const gameDate = new Date('2026-02-28');
     gameDate.setDate(gameDate.getDate() + (i * 3));
     await prisma.game.create({
       data: {
@@ -119,9 +119,9 @@ async function main() {
   }
 
   // Games - Basketball girls
-  const bbGirlsOpponents = ['Lake Travis', 'Dripping Springs', 'Hays', 'Bowie', 'Anderson'];
+  const bbGirlsOpponents = ['Fort Worth Christian', 'Dallas Christian', 'Covenant Christian', 'Grace Prep', 'Grapevine Faith'];
   for (let i = 0; i < bbGirlsOpponents.length; i++) {
-    const gameDate = new Date('2026-02-20');
+    const gameDate = new Date('2026-03-01');
     gameDate.setDate(gameDate.getDate() + (i * 3));
     await prisma.game.create({
       data: {
@@ -136,9 +136,9 @@ async function main() {
   }
 
   // Games - Baseball
-  const baseballOpponents = ['Round Rock', 'Cedar Park', 'Vandegrift', 'Vista Ridge', 'McNeil', 'Leander', 'Hendrickson', 'Stony Point'];
+  const baseballOpponents = ['Bishop Lynch', 'Prestonwood Christian', 'Regents School', 'Houston Christian', 'Nolan Catholic', 'All Saints', 'Midland Christian', 'Brook Hill'];
   for (let i = 0; i < baseballOpponents.length; i++) {
-    const gameDate = new Date('2026-02-24');
+    const gameDate = new Date('2026-03-02');
     gameDate.setDate(gameDate.getDate() + (i * 4));
     await prisma.game.create({
       data: {
@@ -153,9 +153,9 @@ async function main() {
   }
 
   // Games - Soccer
-  const soccerOpponents = ['Austin High', 'Travis', 'Crockett', 'McCallum', 'Akins', 'Del Valle'];
+  const soccerOpponents = ['Trinity Valley', 'Liberty Christian', 'John Paul II', 'Southwest Christian', 'Plano John Paul', 'Heritage Christian'];
   for (let i = 0; i < soccerOpponents.length; i++) {
-    const gameDate = new Date('2026-02-21');
+    const gameDate = new Date('2026-03-01');
     gameDate.setDate(gameDate.getDate() + (i * 5));
     await prisma.game.create({
       data: {
@@ -170,9 +170,9 @@ async function main() {
   }
 
   // Track meets
-  const trackMeets = ['Relays at Round Rock', 'District Qualifier', 'Westlake Invitational', 'Regional Qualifier'];
+  const trackMeets = ['Relays at Midland Christian', 'District Qualifier', 'TCA Invitational', 'Regional Qualifier'];
   for (let i = 0; i < trackMeets.length; i++) {
-    const meetDate = new Date('2026-02-28');
+    const meetDate = new Date('2026-03-07');
     meetDate.setDate(meetDate.getDate() + (i * 14));
     await prisma.game.create({
       data: {
@@ -187,9 +187,9 @@ async function main() {
   }
 
   // Tennis matches
-  const tennisOpponents = ['Lake Travis', 'Dripping Springs', 'Hays', 'Bowie', 'Anderson'];
+  const tennisOpponents = ['Fort Worth Christian', 'Dallas Christian', 'Covenant Christian', 'Grace Prep', 'Grapevine Faith'];
   for (let i = 0; i < tennisOpponents.length; i++) {
-    const matchDate = new Date('2026-02-23');
+    const matchDate = new Date('2026-03-02');
     matchDate.setDate(matchDate.getDate() + (i * 7));
     await prisma.game.create({
       data: {
@@ -217,7 +217,7 @@ async function main() {
 
   for (const config of practiceConfigs) {
     for (let d = 0; d < 14; d++) {
-      const date = new Date('2026-02-18');
+      const date = new Date('2026-02-27');
       date.setDate(date.getDate() + d);
       const dayOfWeek = date.getDay();
       if (config.days.includes(dayOfWeek)) {
@@ -283,6 +283,31 @@ async function main() {
       scope: 'SCHOOL_WIDE',
       startDatetime: new Date('2026-02-25T00:00:00Z'),
       endDatetime: new Date('2026-02-26T23:59:00Z'),
+      createdBy: user.id,
+    },
+  });
+  await prisma.blocker.create({
+    data: {
+      schoolId: school.id,
+      type: 'MAINTENANCE',
+      name: 'Facility Inspection',
+      description: 'Annual safety and compliance inspection of Main Gymnasium',
+      scope: 'FACILITY',
+      facilityId: mainGym.id,
+      startDatetime: new Date('2026-03-03T00:00:00Z'),
+      endDatetime: new Date('2026-03-04T23:59:00Z'),
+      createdBy: user.id,
+    },
+  });
+  await prisma.blocker.create({
+    data: {
+      schoolId: school.id,
+      type: 'EXAM',
+      name: 'Standardized Testing',
+      description: 'School-wide standardized testing - no afternoon practices',
+      scope: 'SCHOOL_WIDE',
+      startDatetime: new Date('2026-03-05T00:00:00Z'),
+      endDatetime: new Date('2026-03-05T23:59:00Z'),
       createdBy: user.id,
     },
   });

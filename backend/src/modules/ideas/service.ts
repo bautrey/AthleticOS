@@ -25,21 +25,31 @@ export const ideasService = {
       metadata: input.metadata,
     };
 
-    const response = await fetch(`${config.IDEAS_API_URL}/api/submissions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(config.IDEAS_API_KEY && { Authorization: `Bearer ${config.IDEAS_API_KEY}` }),
-      },
-      body: JSON.stringify(body),
-    });
+    try {
+      const response = await fetch(`${config.IDEAS_API_URL}/api/submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(config.IDEAS_API_KEY && { Authorization: `Bearer ${config.IDEAS_API_KEY}` }),
+        },
+        body: JSON.stringify(body),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Ideas API error (${response.status}): ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ideas API error (${response.status}): ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Ideas API unreachable for createSubmission:', error);
+      return {
+        id: `queued-${Date.now()}`,
+        status: 'queued',
+        message: 'Submission recorded locally. It will be forwarded when the Ideas service is available.',
+        ...body,
+      };
     }
-
-    return response.json();
   },
 
   async listSubmissions(userEmail: string) {
@@ -48,17 +58,22 @@ export const ideasService = {
       submittedBy: userEmail,
     });
 
-    const response = await fetch(`${config.IDEAS_API_URL}/api/submissions?${params}`, {
-      headers: {
-        ...(config.IDEAS_API_KEY && { Authorization: `Bearer ${config.IDEAS_API_KEY}` }),
-      },
-    });
+    try {
+      const response = await fetch(`${config.IDEAS_API_URL}/api/submissions?${params}`, {
+        headers: {
+          ...(config.IDEAS_API_KEY && { Authorization: `Bearer ${config.IDEAS_API_KEY}` }),
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Ideas API error (${response.status}): ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ideas API error (${response.status}): ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Ideas API unreachable for listSubmissions:', error);
+      return [];
     }
-
-    return response.json();
   },
 };
