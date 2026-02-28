@@ -18,6 +18,7 @@ import { importRoutes } from './modules/import/routes.js';
 import { sharesRoutes } from './modules/shares/routes.js';
 import { priorityRuleRoutes } from './modules/priority-rules/routes.js';
 import { publicScheduleRoutes } from './modules/shares/public-routes.js';
+import { eventsRoutes } from './modules/events/routes.js';
 import { ideasRoutes } from './modules/ideas/routes.js';
 import { AppError } from './common/errors.js';
 import { ZodError } from 'zod';
@@ -78,6 +79,7 @@ await app.register(async (api) => {
   await api.register(importRoutes);
   await api.register(sharesRoutes);
   await api.register(priorityRuleRoutes);
+  await api.register(eventsRoutes);
   await api.register(ideasRoutes);
 }, { prefix: '/api/v1' });
 

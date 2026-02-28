@@ -1,8 +1,9 @@
 // frontend/src/pages/ConflictsPage.tsx
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { ConflictsList } from '../components/conflicts/ConflictsList';
+import { BatchActionsBar } from '../components/conflicts/BatchActionsBar';
 import { useConflictList } from '../hooks/useConflicts';
 import type { BlockerType, ConflictListQuery } from '../api/conflicts';
 
@@ -23,13 +24,47 @@ export function ConflictsPage() {
     limit: 25,
     sortBy: 'datetime',
     sortOrder: 'asc',
+    includeSuggestions: true,
   });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [activeDetailIndex, setActiveDetailIndex] = useState<number | null>(null);
 
   const { data, isLoading } = useConflictList(schoolId!, query);
 
   const updateFilter = (updates: Partial<ConflictListQuery>) => {
     setQuery((prev) => ({ ...prev, ...updates, page: 1 }));
+    setSelectedIds(new Set());
   };
+
+  const handleSelectToggle = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    if (!data?.data) return;
+    const allIds = data.data.map(item => `${item.type}-${item.id}`);
+    const allSelected = allIds.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  }, [data?.data, selectedIds]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  // Get the selected items for batch operations
+  const selectedItems = data?.data?.filter(item => selectedIds.has(`${item.type}-${item.id}`)) ?? [];
 
   return (
     <Layout>
@@ -97,12 +132,21 @@ export function ConflictsPage() {
       </div>
 
       {/* Conflicts List */}
-      <div className="bg-white rounded-lg shadow">
+      <div className={`bg-white rounded-lg shadow ${selectedIds.size > 0 ? 'pb-16' : ''}`}>
         {isLoading ? (
           <div className="p-8 text-center text-gray-500">Loading conflicts...</div>
         ) : (
           <>
-            <ConflictsList items={data?.data ?? []} schoolId={schoolId!} />
+            <ConflictsList
+              items={data?.data ?? []}
+              schoolId={schoolId!}
+              selectedIds={selectedIds}
+              onSelectToggle={handleSelectToggle}
+              onSelectAll={handleSelectAll}
+              activeDetailIndex={activeDetailIndex}
+              onOpenDetail={setActiveDetailIndex}
+              onCloseDetail={() => setActiveDetailIndex(null)}
+            />
 
             {/* Pagination */}
             {data?.meta && data.meta.totalPages > 1 && (
@@ -132,6 +176,14 @@ export function ConflictsPage() {
           </>
         )}
       </div>
+
+      {/* Batch Actions Bar */}
+      <BatchActionsBar
+        selectedCount={selectedIds.size}
+        selectedItems={selectedItems}
+        schoolId={schoolId!}
+        onClearSelection={handleClearSelection}
+      />
     </Layout>
   );
 }
