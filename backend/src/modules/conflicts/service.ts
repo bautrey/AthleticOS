@@ -2,6 +2,7 @@
 import { BlockerScope, BlockerType, EventType, Blocker } from '@prisma/client';
 import { prisma } from '../../common/db.js';
 import { NotFoundError } from '../../common/errors.js';
+import { priorityRuleService } from '../priority-rules/service.js';
 
 // ============ Interfaces ============
 
@@ -32,6 +33,19 @@ export interface CreateOverrideInput {
   eventId: string;
   blockerId: string;
   reason?: string;
+}
+
+export interface ConflictSuggestion {
+  action: 'reschedule_lower' | 'override' | 'manual_review';
+  targetEventId: string;
+  targetEventName: string;
+  reason: string;
+  confidence: 'high' | 'medium' | 'low';
+  priorityComparison: {
+    winner: { eventId: string; name: string; score: number };
+    loser: { eventId: string; name: string; score: number };
+  } | null;
+  eventScore: number;
 }
 
 // ============ Helper Functions ============
@@ -366,6 +380,7 @@ export const conflictService = {
       blockerType?: string;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
+      includeSuggestions?: boolean;
     }
   ): Promise<{
     data: Array<{
@@ -379,11 +394,12 @@ export const conflictService = {
       seasonId: string;
       conflicts: Conflict[];
       overrideCount: number;
+      suggestion?: ConflictSuggestion;
     }>;
     meta: { page: number; limit: number; total: number; totalPages: number };
     summary: { total: number; byBlockerType: Record<string, number> };
   }> {
-    const { page, limit, eventType, blockerType, sortBy, sortOrder } = options;
+    const { page, limit, eventType, blockerType, sortBy, sortOrder, includeSuggestions } = options;
 
     // Get all seasons for this school
     const seasons = await prisma.season.findMany({
@@ -410,9 +426,12 @@ export const conflictService = {
       teamName: string;
       teamLevel: string;
       facilityName: string | null;
+      facilityId: string | null;
       seasonId: string;
+      homeAway?: string;
       conflicts: Conflict[];
       overrideCount: number;
+      suggestion?: ConflictSuggestion;
     }> = [];
 
     for (const season of seasons) {
@@ -439,7 +458,9 @@ export const conflictService = {
                 teamName: season.team.name,
                 teamLevel: season.team.level,
                 facilityName: game.facility?.name ?? null,
+                facilityId: game.facilityId,
                 seasonId: season.id,
+                homeAway: (game as any).homeAway,
                 conflicts: filtered,
                 overrideCount: overrides,
               });
@@ -471,6 +492,7 @@ export const conflictService = {
                 teamName: season.team.name,
                 teamLevel: season.team.level,
                 facilityName: practice.facility?.name ?? null,
+                facilityId: practice.facilityId,
                 seasonId: season.id,
                 conflicts: filtered,
                 overrideCount: overrides,
@@ -501,6 +523,29 @@ export const conflictService = {
     const total = allConflicting.length;
     const start = (page - 1) * limit;
     const paginated = allConflicting.slice(start, start + limit);
+
+    // Generate suggestions if requested
+    if (includeSuggestions) {
+      for (const item of paginated) {
+        try {
+          item.suggestion = await this.generateSuggestion(
+            schoolId,
+            {
+              type: item.type,
+              id: item.id,
+              teamName: item.teamName,
+              teamLevel: item.teamLevel,
+              seasonId: item.seasonId,
+              homeAway: item.homeAway,
+              facilityId: item.facilityId,
+            },
+            item.conflicts
+          );
+        } catch {
+          // Skip suggestion on error
+        }
+      }
+    }
 
     return {
       data: paginated,
@@ -579,6 +624,74 @@ export const conflictService = {
     });
 
     return overrides;
+  },
+
+  /**
+   * Generate a suggestion for a conflicting event based on priority scores
+   */
+  async generateSuggestion(
+    schoolId: string,
+    event: {
+      type: 'game' | 'practice';
+      id: string;
+      teamName: string;
+      teamLevel: string;
+      seasonId: string;
+      homeAway?: string;
+      facilityId?: string | null;
+    },
+    conflicts: Conflict[]
+  ): Promise<ConflictSuggestion> {
+    // Determine season status
+    const season = await prisma.season.findUnique({
+      where: { id: event.seasonId },
+      include: { team: true },
+    });
+
+    let seasonStatus: 'IN_SEASON' | 'OFF_SEASON' = 'IN_SEASON';
+    if (season) {
+      const now = new Date();
+      seasonStatus = now >= season.startDate && now <= season.endDate ? 'IN_SEASON' : 'OFF_SEASON';
+    }
+
+    // Calculate this event's priority score
+    const result = await priorityRuleService.calculate(schoolId, {
+      teamLevel: event.teamLevel as 'VARSITY' | 'JV' | 'FRESHMAN',
+      seasonStatus,
+      eventType: event.type === 'game' ? 'GAME' : 'PRACTICE',
+      homeAway: (event.homeAway || 'HOME') as 'HOME' | 'AWAY' | 'NEUTRAL',
+      facilityId: event.facilityId ?? undefined,
+    });
+
+    // For blocker-based conflicts, suggest override with confidence based on score
+    // High-priority events (score > 70) get high confidence override suggestion
+    // Medium-priority events (40-70) get medium confidence
+    // Low-priority events (<40) get low confidence (manual review)
+    let confidence: 'high' | 'medium' | 'low';
+    let action: 'override' | 'manual_review';
+
+    if (result.score > 70) {
+      confidence = 'high';
+      action = 'override';
+    } else if (result.score > 40) {
+      confidence = 'medium';
+      action = 'override';
+    } else {
+      confidence = 'low';
+      action = 'manual_review';
+    }
+
+    const blockerSummary = conflicts.map(c => c.blockerName).join(', ');
+
+    return {
+      action,
+      targetEventId: event.id,
+      targetEventName: `${event.teamName} ${event.type === 'game' ? 'Game' : 'Practice'}`,
+      reason: `Score ${result.score}: ${event.teamLevel} ${event.type} vs ${blockerSummary}`,
+      confidence,
+      priorityComparison: null,
+      eventScore: result.score,
+    };
   },
 
   // Private helper

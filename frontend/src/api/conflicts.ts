@@ -70,12 +70,47 @@ export interface ConflictListItem {
   seasonId: string;
   conflicts: Conflict[];
   overrideCount: number;
+  suggestion?: ConflictSuggestion;
 }
 
 export interface ConflictListResponse {
   data: ConflictListItem[];
   meta: { page: number; limit: number; total: number; totalPages: number };
   summary: { total: number; byBlockerType: Record<string, number> };
+}
+
+export interface ConflictSuggestion {
+  action: 'reschedule_lower' | 'override' | 'manual_review';
+  targetEventId: string;
+  targetEventName: string;
+  reason: string;
+  confidence: 'high' | 'medium' | 'low';
+  priorityComparison: {
+    winner: { eventId: string; name: string; score: number };
+    loser: { eventId: string; name: string; score: number };
+  } | null;
+  eventScore: number;
+}
+
+export interface ConflictOverrideRecord {
+  blockerId: string;
+  reason: string | null;
+  overriddenAt: string;
+}
+
+export interface BatchOverrideInput {
+  overrides: Array<{
+    eventType: EventType;
+    eventId: string;
+    blockerId: string;
+  }>;
+  reason: string;
+}
+
+export interface BatchOverrideResult {
+  succeeded: number;
+  failed: number;
+  errors: Array<{ eventId: string; error: string }>;
 }
 
 export interface ConflictListQuery {
@@ -85,6 +120,7 @@ export interface ConflictListQuery {
   blockerType?: BlockerType;
   sortBy?: 'datetime' | 'blockerType';
   sortOrder?: 'asc' | 'desc';
+  includeSuggestions?: boolean;
 }
 
 export const conflictsApi = {
@@ -97,6 +133,7 @@ export const conflictsApi = {
     if (query?.blockerType) params.append('blockerType', query.blockerType);
     if (query?.sortBy) params.append('sortBy', query.sortBy);
     if (query?.sortOrder) params.append('sortOrder', query.sortOrder);
+    if (query?.includeSuggestions) params.append('includeSuggestions', 'true');
     const qs = params.toString();
     const { data } = await api.get(`/schools/${schoolId}/conflicts${qs ? `?${qs}` : ''}`);
     return data;
@@ -135,6 +172,18 @@ export const conflictsApi = {
   // Create a conflict override
   createOverride: async (input: CreateOverrideInput): Promise<{ id: string }> => {
     const { data } = await api.post('/conflicts/override', input);
+    return data.data;
+  },
+
+  // Get override history for an event
+  getOverridesForEvent: async (eventType: EventType, eventId: string): Promise<ConflictOverrideRecord[]> => {
+    const { data } = await api.get(`/conflicts/overrides/${eventType}/${eventId}`);
+    return data.data;
+  },
+
+  // Batch override multiple conflicts
+  batchOverride: async (input: BatchOverrideInput): Promise<BatchOverrideResult> => {
+    const { data } = await api.post('/conflicts/batch-override', input);
     return data.data;
   },
 };

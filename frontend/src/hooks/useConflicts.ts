@@ -4,6 +4,8 @@ import {
   conflictsApi,
   type CreateOverrideInput,
   type ConflictListQuery,
+  type EventType,
+  type BatchOverrideInput,
 } from '../api/conflicts';
 
 // List all conflicts for a school (paginated)
@@ -67,7 +69,27 @@ export function useCreateConflictOverride() {
   return useMutation({
     mutationFn: (data: CreateOverrideInput) => conflictsApi.createOverride(data),
     onSuccess: () => {
-      // Invalidate all conflict queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['conflicts'] });
+    },
+  });
+}
+
+// Get override history for an event
+export function useEventOverrides(eventType: EventType | null, eventId: string | null) {
+  return useQuery({
+    queryKey: ['conflicts', 'overrides', eventType, eventId],
+    queryFn: () => conflictsApi.getOverridesForEvent(eventType!, eventId!),
+    enabled: !!eventType && !!eventId,
+  });
+}
+
+// Batch override multiple conflicts
+export function useBatchOverride() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: BatchOverrideInput) => conflictsApi.batchOverride(data),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conflicts'] });
     },
   });

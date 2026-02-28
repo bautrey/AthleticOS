@@ -1,5 +1,8 @@
 // frontend/src/components/conflicts/ConflictDetailPanel.tsx
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { Conflict } from '../../api/conflicts';
+import { useCreateConflictOverride, useEventOverrides } from '../../hooks/useConflicts';
 
 interface ConflictDetailPanelProps {
   isOpen: boolean;
@@ -9,8 +12,15 @@ interface ConflictDetailPanelProps {
     id: string;
     datetime: string;
     opponent?: string;
+    teamName?: string;
+    teamLevel?: string;
+    seasonId?: string;
+    facilityName?: string | null;
   };
   conflicts: Conflict[];
+  schoolId?: string;
+  onNextConflict?: () => void;
+  onPrevConflict?: () => void;
 }
 
 const formatDate = (dateString: string): string => {
@@ -39,6 +49,18 @@ const formatDateRange = (start: string, end: string): string => {
   return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}`;
 };
 
+const formatRelative = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
+
 const getBlockerTypeIcon = (type: string): string => {
   switch (type) {
     case 'EXAM':
@@ -63,8 +85,35 @@ export function ConflictDetailPanel({
   onClose,
   event,
   conflicts,
+  schoolId,
+  onNextConflict,
+  onPrevConflict,
 }: ConflictDetailPanelProps) {
+  const [overrideReason, setOverrideReason] = useState('');
+  const [showOverrideSuccess, setShowOverrideSuccess] = useState(false);
+  const overrideMutation = useCreateConflictOverride();
+  const eventType = event.type === 'game' ? 'GAME' as const : 'PRACTICE' as const;
+  const { data: overrides } = useEventOverrides(isOpen ? eventType : null, isOpen ? event.id : null);
+
   if (!isOpen) return null;
+
+  const handleOverrideAll = () => {
+    const promises = conflicts.map((conflict) =>
+      overrideMutation.mutateAsync({
+        eventType,
+        eventId: event.id,
+        blockerId: conflict.blockerId,
+        reason: overrideReason || undefined,
+      })
+    );
+    Promise.all(promises).then(() => {
+      setOverrideReason('');
+      setShowOverrideSuccess(true);
+      setTimeout(() => setShowOverrideSuccess(false), 3000);
+    });
+  };
+
+  const isFullyOverridden = overrides ? overrides.length >= conflicts.length : false;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -81,11 +130,16 @@ export function ConflictDetailPanel({
                 Conflict Details
               </h2>
               <p className="text-sm text-gray-500 mt-1">
+                {event.teamName && <span className="font-medium text-gray-700">{event.teamName}</span>}
+                {event.teamName && ' — '}
                 {event.type === 'game'
                   ? `Game vs ${event.opponent}`
                   : 'Practice'}{' '}
                 on {formatDate(event.datetime)}
               </p>
+              {event.facilityName && (
+                <p className="text-xs text-gray-400 mt-0.5">{event.facilityName}</p>
+              )}
             </div>
             <button
               onClick={onClose}
@@ -110,6 +164,7 @@ export function ConflictDetailPanel({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Conflict list */}
           {conflicts.map((conflict) => (
             <div
               key={conflict.blockerId}
@@ -153,20 +208,95 @@ export function ConflictDetailPanel({
               </div>
             </div>
           ))}
+
+          {/* Actions Section */}
+          <div className="border-t border-gray-200 mt-4 pt-4">
+            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Actions</h4>
+
+            {isFullyOverridden ? (
+              <div className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg p-3">
+                All conflicts for this event have been overridden.
+              </div>
+            ) : (
+              <>
+                {showOverrideSuccess && (
+                  <div className="mb-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg p-3">
+                    Override saved successfully.
+                  </div>
+                )}
+
+                {/* Inline Override Form */}
+                <div className="space-y-2">
+                  <textarea
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    placeholder="Override reason (optional)"
+                    className="w-full bg-white border border-gray-200 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={2}
+                  />
+                  <button
+                    onClick={handleOverrideAll}
+                    disabled={overrideMutation.isPending}
+                    className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-medium rounded px-3 py-2 text-sm transition-colors"
+                  >
+                    {overrideMutation.isPending
+                      ? 'Overriding...'
+                      : `Override All ${conflicts.length} Conflict${conflicts.length !== 1 ? 's' : ''}`}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Reschedule + View Schedule links */}
+            {schoolId && event.seasonId && (
+              <div className="flex gap-4 mt-3">
+                <Link
+                  to={`/schools/${schoolId}/seasons/${event.seasonId}`}
+                  className="text-blue-600 text-sm hover:underline"
+                >
+                  Reschedule Event
+                </Link>
+                <Link
+                  to={`/schools/${schoolId}`}
+                  className="text-blue-600 text-sm hover:underline"
+                >
+                  View Full Schedule
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Override History */}
+          {overrides && overrides.length > 0 && (
+            <div className="border-t border-gray-200 mt-4 pt-4">
+              <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Override History</h4>
+              <div className="space-y-1">
+                {overrides.map((o, i) => (
+                  <div key={i} className="text-xs text-gray-400">
+                    Overridden {formatRelative(o.overriddenAt)}{o.reason ? ` — ${o.reason}` : ' — No reason given'}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <h4 className="font-medium text-sm text-gray-700 mb-2">
-            How to resolve
-          </h4>
-          <ul className="text-sm text-gray-600 space-y-1">
-            <li>
-              • Change the {event.type} date/time to avoid the blocked period
-            </li>
-            <li>• Change the facility (if facility-specific blocker)</li>
-            <li>• Override and save anyway (reason will be logged)</li>
-          </ul>
+        {/* Footer with navigation */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+          <button
+            onClick={onPrevConflict}
+            disabled={!onPrevConflict}
+            className="text-blue-600 text-sm hover:underline disabled:text-gray-300 disabled:no-underline"
+          >
+            &larr; Previous
+          </button>
+          <button
+            onClick={onNextConflict}
+            disabled={!onNextConflict}
+            className="text-blue-600 text-sm hover:underline disabled:text-gray-300 disabled:no-underline"
+          >
+            Next Conflict &rarr;
+          </button>
         </div>
       </div>
     </div>
