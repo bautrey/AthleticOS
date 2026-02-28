@@ -6,14 +6,13 @@ import { useBatchOverride, useCreateConflictOverride } from '../../hooks/useConf
 interface BatchActionsBarProps {
   selectedCount: number;
   selectedItems: ConflictListItem[];
-  schoolId: string;
+  schoolId?: string;
   onClearSelection: () => void;
 }
 
 export function BatchActionsBar({
   selectedCount,
   selectedItems,
-  schoolId,
   onClearSelection,
 }: BatchActionsBarProps) {
   const [showOverrideModal, setShowOverrideModal] = useState(false);
