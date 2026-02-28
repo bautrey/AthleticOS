@@ -1,9 +1,12 @@
 // frontend/src/pages/Login.tsx
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { invitesApi } from '../api/invites';
 
 export function Login() {
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('invite');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,6 +20,15 @@ export function Login() {
     setLoading(true);
     try {
       await login(email, password);
+      if (inviteToken) {
+        try {
+          const result = await invitesApi.accept(inviteToken);
+          navigate(`/schools/${result.schoolId}`);
+          return;
+        } catch {
+          // If invite accept fails, just go to dashboard
+        }
+      }
       navigate('/');
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
@@ -61,7 +73,7 @@ export function Login() {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
-          Don't have an account? <Link to="/register" className="text-blue-600">Sign up</Link>
+          Don't have an account? <Link to={inviteToken ? `/register?invite=${inviteToken}` : '/register'} className="text-blue-600">Sign up</Link>
         </p>
       </div>
     </div>

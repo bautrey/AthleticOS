@@ -8,6 +8,7 @@ import { TeamsTab } from '../components/TeamsTab';
 import { FacilitiesTab } from '../components/FacilitiesTab';
 import { SeasonsTab } from '../components/SeasonsTab';
 import { SettingsTab } from '../components/SettingsTab';
+import { SchoolMembers } from '../components/SchoolMembers';
 import { schoolsApi } from '../api/schools';
 import { teamsApi } from '../api/teams';
 import { seasonsApi } from '../api/seasons';
@@ -17,6 +18,7 @@ const TABS = [
   { id: 'teams', label: 'Teams' },
   { id: 'facilities', label: 'Facilities' },
   { id: 'seasons', label: 'Seasons' },
+  { id: 'members', label: 'Members' },
   { id: 'settings', label: 'Settings' },
 ];
 
@@ -132,6 +134,7 @@ export function SchoolDetail() {
         {activeTab === 'teams' && <TeamsTab schoolId={schoolId!} />}
         {activeTab === 'facilities' && <FacilitiesTab schoolId={schoolId!} />}
         {activeTab === 'seasons' && <SeasonsTab schoolId={schoolId!} />}
+        {activeTab === 'members' && <SchoolMembers schoolId={schoolId!} />}
         {activeTab === 'settings' && <SettingsTab school={school} />}
       </Tabs>
     </Layout>

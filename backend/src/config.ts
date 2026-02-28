@@ -11,6 +11,8 @@ const envSchema = z.object({
   PUBLIC_URL: z.string().default('http://localhost:3005'),
   IDEAS_API_URL: z.string().default('https://ideas.fortiumsoftware.com'),
   IDEAS_API_KEY: z.string().default(''),
+  RESEND_API_KEY: z.string().default(''),
+  APP_URL: z.string().default('http://localhost:3005'),
 });
 
 export const config = envSchema.parse(process.env);

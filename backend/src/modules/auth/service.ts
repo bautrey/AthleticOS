@@ -15,9 +15,10 @@ export const authService = {
     const user = await prisma.user.create({
       data: {
         email: input.email,
+        name: input.name,
         passwordHash,
       },
-      select: { id: true, email: true, createdAt: true },
+      select: { id: true, email: true, name: true, createdAt: true },
     });
 
     return user;
@@ -43,6 +44,7 @@ export const authService = {
       select: {
         id: true,
         email: true,
+        name: true,
         createdAt: true,
         schoolUsers: {
           select: {
@@ -60,6 +62,7 @@ export const authService = {
     return {
       id: user.id,
       email: user.email,
+      name: user.name,
       createdAt: user.createdAt,
       schools: user.schoolUsers.map(su => ({
         id: su.school.id,

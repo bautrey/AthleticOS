@@ -26,7 +26,7 @@ export async function priorityRuleRoutes(app: FastifyInstance) {
   app.get<{ Params: SchoolParams }>(
     '/schools/:schoolId/priority-rules',
     {
-      preHandler: [requireRole('ADMIN', 'COACH', 'VIEWER')],
+      preHandler: [requireRole('ADMIN', 'ATHLETIC_DIRECTOR', 'COACH', 'PARENT', 'ATHLETE')],
     },
     async (request) => {
       const rule = await priorityRuleService.get(request.params.schoolId);

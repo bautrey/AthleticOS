@@ -12,7 +12,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string, inviteToken?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -46,12 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(profileResponse.data.data);
   };
 
-  const register = async (email: string, password: string) => {
-    const { data } = await api.post('/auth/register', { email, password });
+  const register = async (email: string, password: string, name?: string, inviteToken?: string) => {
+    const { data } = await api.post('/auth/register', { email, password, name, inviteToken });
     localStorage.setItem('accessToken', data.data.accessToken);
     localStorage.setItem('refreshToken', data.data.refreshToken);
-    // New user has no schools yet
-    setUser({ ...data.data.user, schools: [] });
+    // Fetch full profile to get schools (may have auto-joined via invite)
+    const profileResponse = await api.get('/auth/me');
+    setUser(profileResponse.data.data);
   };
 
   const logout = () => {

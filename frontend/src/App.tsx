@@ -12,6 +12,7 @@ import { PriorityRulesPage } from './pages/PriorityRulesPage';
 import { PublicSchedulePage } from './pages/PublicSchedulePage';
 import { PublicScheduleEmbed } from './pages/PublicScheduleEmbed';
 import { ConflictsPage } from './pages/ConflictsPage';
+import { AcceptInvitePage } from './pages/AcceptInvitePage';
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ function AppRoutes() {
       {/* Public routes (no auth required) */}
       <Route path="/s/:token" element={<PublicSchedulePage />} />
       <Route path="/s/:token/embed" element={<PublicScheduleEmbed />} />
+      <Route path="/invite/:token" element={<AcceptInvitePage />} />
 
       {/* Auth routes */}
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />

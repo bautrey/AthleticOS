@@ -1,9 +1,12 @@
 // frontend/src/pages/Register.tsx
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export function Register() {
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('invite');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -28,7 +31,7 @@ export function Register() {
 
     setLoading(true);
     try {
-      await register(email, password);
+      await register(email, password, name || undefined, inviteToken || undefined);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -47,6 +50,18 @@ export function Register() {
               {error}
             </div>
           )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Optional"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email
@@ -93,7 +108,7 @@ export function Register() {
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
           Already have an account?{' '}
-          <Link to="/login" className="text-blue-600 hover:underline">
+          <Link to={inviteToken ? `/login?invite=${inviteToken}` : '/login'} className="text-blue-600 hover:underline">
             Sign in
           </Link>
         </p>

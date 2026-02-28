@@ -27,7 +27,7 @@ export async function blockersRoutes(app: FastifyInstance) {
   app.get<{ Params: SchoolParams; Querystring: BlockerQuery }>(
     '/schools/:schoolId/blockers',
     {
-      preHandler: [requireRole('ADMIN', 'COACH', 'VIEWER')],
+      preHandler: [requireRole('ADMIN', 'ATHLETIC_DIRECTOR', 'COACH', 'PARENT', 'ATHLETE')],
     },
     async (request) => {
       const query = blockerQuerySchema.parse(request.query);
@@ -40,7 +40,7 @@ export async function blockersRoutes(app: FastifyInstance) {
   app.get<{ Params: BlockerParams }>(
     '/schools/:schoolId/blockers/:id',
     {
-      preHandler: [requireRole('ADMIN', 'COACH', 'VIEWER')],
+      preHandler: [requireRole('ADMIN', 'ATHLETIC_DIRECTOR', 'COACH', 'PARENT', 'ATHLETE')],
     },
     async (request) => {
       const blocker = await blockerService.getById(

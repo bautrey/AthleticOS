@@ -2,6 +2,7 @@
 import type { FastifyInstance } from 'fastify';
 import { registerSchema, loginSchema } from './schemas.js';
 import { authService } from './service.js';
+import { inviteService } from '../invites/service.js';
 import { config } from '../../config.js';
 
 export async function authRoutes(app: FastifyInstance) {
@@ -9,6 +10,15 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/auth/register', async (request, reply) => {
     const input = registerSchema.parse(request.body);
     const user = await authService.register(input);
+
+    // Auto-accept invite if token provided
+    if (input.inviteToken) {
+      try {
+        await inviteService.acceptInvite(input.inviteToken, user.id);
+      } catch {
+        // Don't fail registration if invite acceptance fails
+      }
+    }
 
     const accessToken = app.jwt.sign(
       { userId: user.id },

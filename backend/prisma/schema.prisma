@@ -13,11 +13,13 @@ datasource db {
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
+  name         String?
   passwordHash String       @map("password_hash")
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
   schoolUsers  SchoolUser[]
+  invitesSent  Invite[]     @relation("inviter")
 
   @@map("users")
 }
@@ -26,7 +28,7 @@ model SchoolUser {
   id        String   @id @default(cuid())
   schoolId  String   @map("school_id")
   userId    String   @map("user_id")
-  role      Role     @default(VIEWER)
+  role      Role     @default(ATHLETE)
   createdAt DateTime @default(now()) @map("created_at")
 
   school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -38,8 +40,27 @@ model SchoolUser {
 
 enum Role {
   ADMIN
+  ATHLETIC_DIRECTOR
   COACH
-  VIEWER
+  PARENT
+  ATHLETE
+}
+
+model Invite {
+  id         String    @id @default(cuid())
+  schoolId   String    @map("school_id")
+  email      String
+  role       Role      @default(ATHLETE)
+  token      String    @unique
+  invitedBy  String    @map("invited_by")
+  expiresAt  DateTime  @map("expires_at")
+  acceptedAt DateTime? @map("accepted_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  school     School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  inviter    User      @relation("inviter", fields: [invitedBy], references: [id])
+
+  @@map("invites")
 }
 
 // ============ Core Entities ============
@@ -53,6 +74,7 @@ model School {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   schoolUsers       SchoolUser[]
+  invites           Invite[]
   teams             Team[]
   facilities        Facility[]
   blockers          Blocker[]
