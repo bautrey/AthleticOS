@@ -22,7 +22,7 @@ export function HeroHeader({ school, conflictCount, eventsTodayCount }: HeroHead
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{greeting}</h1>
-          <p className="text-gray-500 mt-1">{school.name} &middot; {dateStr}</p>
+          <p className="text-gray-500 mt-1">{school.name} {'\u00B7'} {dateStr}</p>
         </div>
         <div className="flex items-center gap-4 text-sm">
           {eventsTodayCount > 0 && (

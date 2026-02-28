@@ -25,7 +25,7 @@ export function AttentionStrip({ schoolId, conflictCount, activeBlockerCount }: 
               {conflictCount > 0 && (
                 <>{conflictCount} scheduling conflict{conflictCount !== 1 ? 's' : ''} detected</>
               )}
-              {conflictCount > 0 && activeBlockerCount > 0 && ' &middot; '}
+              {conflictCount > 0 && activeBlockerCount > 0 && ' \u00B7 '}
               {activeBlockerCount > 0 && (
                 <>{activeBlockerCount} active blocker{activeBlockerCount !== 1 ? 's' : ''}</>
               )}
@@ -36,7 +36,7 @@ export function AttentionStrip({ schoolId, conflictCount, activeBlockerCount }: 
           to={`/schools/${schoolId}/conflicts`}
           className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline"
         >
-          Review conflicts &rarr;
+          Review conflicts {'\u2192'}
         </Link>
       </div>
     </div>
