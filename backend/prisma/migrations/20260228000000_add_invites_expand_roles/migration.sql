@@ -1,13 +1,16 @@
--- Add new role values to Role enum
+-- AlterEnum
 ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'ATHLETIC_DIRECTOR';
 ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'PARENT';
 ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'ATHLETE';
 
--- Add name column to users
-ALTER TABLE "users" ADD COLUMN "name" TEXT;
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "name" TEXT;
 
--- Create invites table
-CREATE TABLE "invites" (
+-- AlterTable
+ALTER TABLE "school_users" ALTER COLUMN "role" SET DEFAULT 'ATHLETE';
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "invites" (
     "id" TEXT NOT NULL,
     "school_id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
@@ -21,15 +24,14 @@ CREATE TABLE "invites" (
     CONSTRAINT "invites_pkey" PRIMARY KEY ("id")
 );
 
--- Create unique index on token
-CREATE UNIQUE INDEX "invites_token_key" ON "invites"("token");
+-- CreateIndex
+CREATE UNIQUE INDEX IF NOT EXISTS "invites_token_key" ON "invites"("token");
 
--- Add foreign keys
+-- AddForeignKey
 ALTER TABLE "invites" ADD CONSTRAINT "invites_school_id_fkey" FOREIGN KEY ("school_id") REFERENCES "schools"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_fkey" FOREIGN KEY ("invited_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- Update default role for school_users from VIEWER to ATHLETE
-ALTER TABLE "school_users" ALTER COLUMN "role" SET DEFAULT 'ATHLETE';
+-- AddForeignKey
+ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_fkey" FOREIGN KEY ("invited_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- Migrate existing VIEWER roles to ATHLETE
 UPDATE "school_users" SET "role" = 'ATHLETE' WHERE "role" = 'VIEWER';
