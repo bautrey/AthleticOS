@@ -15,21 +15,26 @@ export async function sendInviteEmail(
     return;
   }
 
-  await resend.emails.send({
-    from: 'AthleticOS <noreply@athleticos.co>',
-    to,
-    subject: `You've been invited to ${schoolName} on AthleticOS`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2>You're invited!</h2>
-        <p><strong>${inviterEmail}</strong> has invited you to join <strong>${schoolName}</strong> on AthleticOS.</p>
-        <p style="margin: 24px 0;">
-          <a href="${inviteUrl}" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
-            Accept Invite
-          </a>
-        </p>
-        <p style="color: #6b7280; font-size: 14px;">This invite expires in 7 days. If you didn't expect this, you can ignore this email.</p>
-      </div>
-    `,
-  });
+  try {
+    const result = await resend.emails.send({
+      from: 'AthleticOS <onboarding@resend.dev>',
+      to,
+      subject: `You've been invited to ${schoolName} on AthleticOS`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+          <h2>You're invited!</h2>
+          <p><strong>${inviterEmail}</strong> has invited you to join <strong>${schoolName}</strong> on AthleticOS.</p>
+          <p style="margin: 24px 0;">
+            <a href="${inviteUrl}" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
+              Accept Invite
+            </a>
+          </p>
+          <p style="color: #6b7280; font-size: 14px;">This invite expires in 7 days. If you didn't expect this, you can ignore this email.</p>
+        </div>
+      `,
+    });
+    console.log('[Email] Sent invite email:', JSON.stringify(result));
+  } catch (err) {
+    console.error('[Email] Failed to send invite email:', err);
+  }
 }
