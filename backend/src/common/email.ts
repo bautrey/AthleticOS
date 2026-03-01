@@ -17,7 +17,7 @@ export async function sendInviteEmail(
 
   try {
     const result = await resend.emails.send({
-      from: 'AthleticOS <onboarding@resend.dev>',
+      from: 'AthleticOS <noreply@athleticos.co>',
       to,
       subject: `You've been invited to ${schoolName} on AthleticOS`,
       html: `
