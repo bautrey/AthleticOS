@@ -39,3 +39,7 @@ prisma/*.db-journal
 # Misc
 *.tgz
 .claude/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

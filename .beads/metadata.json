@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "athleticos",
+  "project_id": "b0737335-b5f8-4304-b67a-389041ed0173"
+}
