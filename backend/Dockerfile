@@ -13,6 +13,8 @@ RUN npx prisma generate
 
 COPY . .
 
+RUN npm run build
+
 EXPOSE 8000
 
-CMD ["npm", "run", "dev"]
+CMD sh -c "npx prisma migrate deploy && node dist/server.js"
