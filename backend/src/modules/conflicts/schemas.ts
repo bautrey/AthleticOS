@@ -27,9 +27,35 @@ export const conflictsListQueryWithSuggestionsSchema = z.object({
   sortBy: z.enum(['datetime', 'blockerType']).default('datetime'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
   includeSuggestions: z.coerce.boolean().optional().default(false),
+  // T-028: Filter by conflict types (comma-separated: blocker, facility, all)
+  types: z.string().optional().default('blocker'),
 });
 
 export type ConflictsListQuery = z.infer<typeof conflictsListQuerySchema>;
+
+// T-026: Check conflicts request schema
+export const checkConflictsSchema = z.object({
+  eventId: z.string().optional(),
+  dateRange: z.object({
+    start: z.string().datetime(),
+    end: z.string().datetime(),
+  }).optional(),
+  types: z.array(z.enum(['blocker', 'facility', 'person', 'resource']))
+    .optional()
+    .default(['blocker', 'facility']),
+});
+
+export type CheckConflictsInput = z.infer<typeof checkConflictsSchema>;
+
+// T-027: Suggest slots request schema
+export const suggestSlotsSchema = z.object({
+  facilityId: z.string().min(1),
+  date: z.string().min(1),
+  durationMinutes: z.number().min(15).max(480),
+  preferredTime: z.string().optional(),
+});
+
+export type SuggestSlotsInput = z.infer<typeof suggestSlotsSchema>;
 
 export const batchOverrideSchema = z.object({
   overrides: z.array(z.object({

@@ -1,3 +1,60 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* T-037: Print styles */
+@media print {
+  /* Hide non-essential UI elements */
+  nav,
+  aside,
+  button,
+  .no-print,
+  [data-no-print] {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-week-view {
+    display: block !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
+
+  /* Clean typography */
+  body {
+    font-size: 12pt;
+    color: #000;
+    background: #fff;
+  }
+
+  /* Table print styles */
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  thead {
+    display: table-header-group;
+  }
+
+  /* Remove shadows and backgrounds */
+  .shadow,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl {
+    box-shadow: none !important;
+  }
+
+  /* Ensure links are visible as text */
+  a {
+    text-decoration: none;
+    color: #000;
+  }
+}

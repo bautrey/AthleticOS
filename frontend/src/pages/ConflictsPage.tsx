@@ -121,6 +121,17 @@ export function ConflictsPage() {
           ))}
         </select>
 
+        {/* T-032: Conflict type filter */}
+        <select
+          value={query.types ?? 'blocker'}
+          onChange={(e) => updateFilter({ types: e.target.value })}
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md"
+        >
+          <option value="blocker">Blockers Only</option>
+          <option value="facility">Facility Double-Bookings</option>
+          <option value="blocker,facility">All Types</option>
+        </select>
+
         <select
           value={query.sortOrder ?? 'asc'}
           onChange={(e) => updateFilter({ sortOrder: e.target.value as 'asc' | 'desc' })}

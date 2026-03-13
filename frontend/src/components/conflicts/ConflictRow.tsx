@@ -116,6 +116,10 @@ export function ConflictRow({
               </svg>
               {item.conflicts.length} conflict{item.conflicts.length !== 1 ? 's' : ''}
             </span>
+            {/* T-031: Conflict type indicator */}
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+              BLOCKER
+            </span>
             {item.suggestion && <SuggestionBadge suggestion={item.suggestion} />}
           </div>
         </td>
@@ -155,6 +159,7 @@ export function ConflictRow({
           teamLevel: item.teamLevel,
           seasonId: item.seasonId,
           facilityName: item.facilityName,
+          facilityId: item.facilityId,
         }}
         conflicts={item.conflicts}
         schoolId={schoolId}

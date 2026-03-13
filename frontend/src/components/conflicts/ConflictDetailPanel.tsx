@@ -1,8 +1,8 @@
 // frontend/src/components/conflicts/ConflictDetailPanel.tsx
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Conflict } from '../../api/conflicts';
-import { useCreateConflictOverride, useEventOverrides } from '../../hooks/useConflicts';
+import type { Conflict, ScoredSlot } from '../../api/conflicts';
+import { useCreateConflictOverride, useEventOverrides, useSuggestSlots } from '../../hooks/useConflicts';
 
 interface ConflictDetailPanelProps {
   isOpen: boolean;
@@ -16,6 +16,7 @@ interface ConflictDetailPanelProps {
     teamLevel?: string;
     seasonId?: string;
     facilityName?: string | null;
+    facilityId?: string | null;
   };
   conflicts: Conflict[];
   schoolId?: string;
@@ -91,7 +92,9 @@ export function ConflictDetailPanel({
 }: ConflictDetailPanelProps) {
   const [overrideReason, setOverrideReason] = useState('');
   const [showOverrideSuccess, setShowOverrideSuccess] = useState(false);
+  const [suggestedSlots, setSuggestedSlots] = useState<ScoredSlot[] | null>(null);
   const overrideMutation = useCreateConflictOverride();
+  const suggestSlotsMutation = useSuggestSlots(schoolId ?? '');
   const eventType = event.type === 'game' ? 'GAME' as const : 'PRACTICE' as const;
   const { data: overrides } = useEventOverrides(isOpen ? eventType : null, isOpen ? event.id : null);
 
@@ -199,9 +202,17 @@ export function ConflictDetailPanel({
                       conflict.endDatetime
                     )}
                   </div>
-                  <div className="mt-2">
+                  <div className="mt-2 flex gap-2">
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
                       {conflict.blockerScope.replace('_', ' ')}
+                    </span>
+                    {/* T-031: Severity badge */}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                      ERROR
+                    </span>
+                    {/* T-031: Conflict type indicator */}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                      BLOCKER
                     </span>
                   </div>
                 </div>
@@ -277,6 +288,72 @@ export function ConflictDetailPanel({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* T-033: Suggested Alternative Slots */}
+          {schoolId && event.facilityId && (
+            <div className="border-t border-gray-200 mt-4 pt-4">
+              <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Alternative Time Slots</h4>
+              {!suggestedSlots ? (
+                <button
+                  onClick={() => {
+                    const eventDate = new Date(event.datetime);
+                    const dateStr = eventDate.toISOString().split('T')[0];
+                    const timeStr = eventDate.toTimeString().slice(0, 5);
+                    // We need the facilityId - derive from conflicts if possible
+                    // For now we fetch suggestions using the event's facility
+                    suggestSlotsMutation.mutate(
+                      {
+                        facilityId: event.facilityId!,
+                        date: dateStr,
+                        durationMinutes: event.type === 'practice' ? 90 : 120,
+                        preferredTime: timeStr,
+                      },
+                      { onSuccess: (slots) => setSuggestedSlots(slots) }
+                    );
+                  }}
+                  disabled={suggestSlotsMutation.isPending}
+                  className="text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+                >
+                  {suggestSlotsMutation.isPending ? 'Finding slots...' : 'Find alternative time slots'}
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  {suggestedSlots.map((slot, i) => (
+                    <div
+                      key={i}
+                      className={`p-2 rounded border text-sm ${
+                        slot.conflictCount === 0
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-yellow-200 bg-yellow-50'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">
+                          {slot.startTime} - {slot.endTime}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          slot.score >= 80 ? 'bg-green-100 text-green-700' :
+                          slot.score >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          Score: {slot.score}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {slot.reasons.join(' | ')}
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setSuggestedSlots(null)}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Clear suggestions
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -11,8 +11,11 @@ import { EditGameModal } from '../components/EditGameModal';
 import { EditPracticeModal } from '../components/EditPracticeModal';
 import { ImportScheduleModal } from '../components/ImportScheduleModal';
 import { ShareScheduleModal } from '../components/ShareScheduleModal';
+import { PrintWeekView } from '../components/weekly-board/PrintWeekView';
 import { seasonsApi } from '../api/seasons';
 import { schoolsApi } from '../api/schools';
+import { gamesApi } from '../api/games';
+import { practicesApi } from '../api/practices';
 import type { Game } from '../api/games';
 import type { Practice } from '../api/practices';
 
@@ -39,6 +42,19 @@ export function SeasonDetail() {
   const { data: season, isLoading: isLoadingSeason } = useQuery({
     queryKey: ['season', seasonId],
     queryFn: () => seasonsApi.get(seasonId!),
+    enabled: !!seasonId,
+  });
+
+  // T-034: Fetch games and practices for print view
+  const { data: games } = useQuery({
+    queryKey: ['games', seasonId],
+    queryFn: () => gamesApi.list(seasonId!),
+    enabled: !!seasonId,
+  });
+
+  const { data: practices } = useQuery({
+    queryKey: ['practices', seasonId],
+    queryFn: () => practicesApi.list(seasonId!),
     enabled: !!seasonId,
   });
 
@@ -97,6 +113,16 @@ export function SeasonDetail() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
               Import
+            </button>
+            {/* T-035: Print button */}
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 no-print"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print
             </button>
             <button
               onClick={() => setShowShareModal(true)}
@@ -159,6 +185,33 @@ export function SeasonDetail() {
           onClose={() => setEditingPractice(null)}
         />
       )}
+
+      {/* T-034/T-038: Print view (hidden on screen, shown on print) */}
+      <PrintWeekView
+        events={[
+          ...(games ?? []).map((g) => ({
+            id: g.id,
+            type: 'game' as const,
+            datetime: g.datetime,
+            opponent: g.opponent,
+            teamName: season?.teamName ?? '',
+            facilityName: null,
+            status: g.status,
+          })),
+          ...(practices ?? []).map((p) => ({
+            id: p.id,
+            type: 'practice' as const,
+            datetime: p.datetime,
+            teamName: season?.teamName ?? '',
+            facilityName: null,
+          })),
+        ]}
+        schoolName={school?.name ?? ''}
+        teamName={season?.teamName}
+        seasonName={season?.name}
+        weekStart={season ? new Date(season.startDate) : undefined}
+        weekEnd={season ? new Date(season.endDate) : undefined}
+      />
     </Layout>
   );
 }

@@ -48,6 +48,45 @@ export interface ConflictSuggestion {
   eventScore: number;
 }
 
+// T-025: TypedConflict interface for enhanced conflict detection
+export interface TypedConflict {
+  type: 'BLOCKER' | 'FACILITY' | 'PERSON' | 'RESOURCE';
+  severity: 'ERROR' | 'WARNING';
+  eventA: {
+    id: string;
+    type: 'GAME' | 'PRACTICE';
+    name: string;
+    datetime: string;
+    facilityName?: string;
+    teamName?: string;
+  };
+  eventB?: {
+    id: string;
+    type: 'GAME' | 'PRACTICE';
+    name: string;
+    datetime: string;
+    facilityName?: string;
+    teamName?: string;
+  };
+  blocker?: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  overlapMinutes: number;
+  suggestion?: ConflictSuggestion;
+}
+
+// T-027: ScoredSlot interface for suggest-slots endpoint
+export interface ScoredSlot {
+  startTime: string;
+  endTime: string;
+  date: string;
+  score: number;
+  conflictCount: number;
+  reasons: string[];
+}
+
 // ============ Helper Functions ============
 
 const typeLabels: Record<BlockerType, string> = {
@@ -692,6 +731,388 @@ export const conflictService = {
       priorityComparison: null,
       eventScore: result.score,
     };
+  },
+
+  // T-022: Facility double-booking detection
+  async checkFacilityConflicts(
+    schoolId: string,
+    dateRange: { start: Date; end: Date }
+  ): Promise<TypedConflict[]> {
+    // Query all games and practices in date range for this school that have a facility assigned
+    const [games, practices] = await Promise.all([
+      prisma.game.findMany({
+        where: {
+          season: { team: { schoolId } },
+          facilityId: { not: null },
+          datetime: { gte: dateRange.start, lt: dateRange.end },
+        },
+        include: {
+          facility: { select: { name: true } },
+          season: { include: { team: { select: { name: true } } } },
+        },
+      }),
+      prisma.practice.findMany({
+        where: {
+          season: { team: { schoolId } },
+          facilityId: { not: null },
+          datetime: { gte: dateRange.start, lt: dateRange.end },
+        },
+        include: {
+          facility: { select: { name: true } },
+          season: { include: { team: { select: { name: true } } } },
+        },
+      }),
+    ]);
+
+    // Normalize all events into a common shape
+    interface NormalizedEvent {
+      id: string;
+      type: 'GAME' | 'PRACTICE';
+      name: string;
+      datetime: Date;
+      endTime: Date;
+      facilityId: string;
+      facilityName: string;
+      teamName: string;
+    }
+
+    const allEvents: NormalizedEvent[] = [];
+
+    for (const game of games) {
+      if (!game.facilityId) continue;
+      allEvents.push({
+        id: game.id,
+        type: 'GAME',
+        name: `Game vs ${game.opponent}`,
+        datetime: game.datetime,
+        endTime: new Date(game.datetime.getTime() + 120 * 60000), // 2 hours default
+        facilityId: game.facilityId,
+        facilityName: game.facility?.name ?? 'Unknown',
+        teamName: game.season.team.name,
+      });
+    }
+
+    for (const practice of practices) {
+      if (!practice.facilityId) continue;
+      allEvents.push({
+        id: practice.id,
+        type: 'PRACTICE',
+        name: `Practice`,
+        datetime: practice.datetime,
+        endTime: new Date(practice.datetime.getTime() + practice.durationMinutes * 60000),
+        facilityId: practice.facilityId,
+        facilityName: practice.facility?.name ?? 'Unknown',
+        teamName: practice.season.team.name,
+      });
+    }
+
+    // Group by facility
+    const byFacility = new Map<string, NormalizedEvent[]>();
+    for (const event of allEvents) {
+      const list = byFacility.get(event.facilityId) ?? [];
+      list.push(event);
+      byFacility.set(event.facilityId, list);
+    }
+
+    const conflicts: TypedConflict[] = [];
+
+    for (const [, events] of byFacility) {
+      // Sort by start time
+      events.sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
+
+      // Check each pair for overlaps
+      for (let i = 0; i < events.length; i++) {
+        for (let j = i + 1; j < events.length; j++) {
+          const a = events[i];
+          const b = events[j];
+
+          // Check overlap: A starts before B ends AND B starts before A ends
+          // Back-to-back is OK (a.endTime === b.datetime)
+          if (a.endTime.getTime() > b.datetime.getTime() && b.endTime.getTime() > a.datetime.getTime()) {
+            const overlapStart = Math.max(a.datetime.getTime(), b.datetime.getTime());
+            const overlapEnd = Math.min(a.endTime.getTime(), b.endTime.getTime());
+            const overlapMinutes = Math.round((overlapEnd - overlapStart) / 60000);
+
+            conflicts.push({
+              type: 'FACILITY',
+              severity: 'ERROR',
+              eventA: {
+                id: a.id,
+                type: a.type,
+                name: a.name,
+                datetime: a.datetime.toISOString(),
+                facilityName: a.facilityName,
+                teamName: a.teamName,
+              },
+              eventB: {
+                id: b.id,
+                type: b.type,
+                name: b.name,
+                datetime: b.datetime.toISOString(),
+                facilityName: b.facilityName,
+                teamName: b.teamName,
+              },
+              overlapMinutes,
+            });
+          }
+        }
+      }
+    }
+
+    return conflicts;
+  },
+
+  // T-023: Person overlap detection (DEFERRED to Sprint 4)
+  // TODO: Implement person overlap detection - detect when a coach, athlete, or staff member
+  // is assigned to multiple events at the same time. Requires person-event assignment model.
+
+  // T-024: Resource collision detection (DEFERRED to Sprint 4)
+  // TODO: Implement resource collision detection - detect when shared equipment, vehicles,
+  // or other resources are double-booked across events. Requires resource-event assignment model.
+
+  // T-026: Run all enabled conflict checks for a school
+  async checkConflicts(
+    schoolId: string,
+    options: {
+      eventId?: string;
+      dateRange?: { start: Date; end: Date };
+      types: Array<'blocker' | 'facility' | 'person' | 'resource'>;
+    }
+  ): Promise<{ conflicts: TypedConflict[]; summary: { total: number; byType: Record<string, number>; bySeverity: Record<string, number> } }> {
+    const allConflicts: TypedConflict[] = [];
+
+    // Default date range: next 90 days
+    const dateRange = options.dateRange ?? {
+      start: new Date(),
+      end: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    };
+
+    // Run blocker checks if requested
+    if (options.types.includes('blocker')) {
+      // Get all seasons for this school
+      const seasons = await prisma.season.findMany({
+        where: { team: { schoolId } },
+        include: {
+          team: { select: { name: true, level: true } },
+          games: {
+            where: { datetime: { gte: dateRange.start, lt: dateRange.end } },
+            include: { facility: { select: { name: true } } },
+          },
+          practices: {
+            where: { datetime: { gte: dateRange.start, lt: dateRange.end } },
+            include: { facility: { select: { name: true } } },
+          },
+        },
+      });
+
+      for (const season of seasons) {
+        for (const game of season.games) {
+          if (options.eventId && game.id !== options.eventId) continue;
+          const result = await this.checkEventConflicts({
+            datetime: game.datetime,
+            seasonId: season.id,
+            facilityId: game.facilityId,
+          });
+          for (const conflict of result.conflicts) {
+            allConflicts.push({
+              type: 'BLOCKER',
+              severity: 'ERROR',
+              eventA: {
+                id: game.id,
+                type: 'GAME',
+                name: `Game vs ${game.opponent}`,
+                datetime: game.datetime.toISOString(),
+                facilityName: game.facility?.name,
+                teamName: season.team.name,
+              },
+              blocker: {
+                id: conflict.blockerId,
+                name: conflict.blockerName,
+                type: conflict.blockerType,
+              },
+              overlapMinutes: Math.round(
+                (Math.min(conflict.endDatetime.getTime(), game.datetime.getTime() + 120 * 60000) -
+                  Math.max(conflict.startDatetime.getTime(), game.datetime.getTime())) / 60000
+              ),
+            });
+          }
+        }
+
+        for (const practice of season.practices) {
+          if (options.eventId && practice.id !== options.eventId) continue;
+          const result = await this.checkEventConflicts({
+            datetime: practice.datetime,
+            durationMinutes: practice.durationMinutes,
+            seasonId: season.id,
+            facilityId: practice.facilityId,
+          });
+          for (const conflict of result.conflicts) {
+            const practiceEnd = practice.datetime.getTime() + practice.durationMinutes * 60000;
+            allConflicts.push({
+              type: 'BLOCKER',
+              severity: 'ERROR',
+              eventA: {
+                id: practice.id,
+                type: 'PRACTICE',
+                name: `Practice`,
+                datetime: practice.datetime.toISOString(),
+                facilityName: practice.facility?.name,
+                teamName: season.team.name,
+              },
+              blocker: {
+                id: conflict.blockerId,
+                name: conflict.blockerName,
+                type: conflict.blockerType,
+              },
+              overlapMinutes: Math.round(
+                (Math.min(conflict.endDatetime.getTime(), practiceEnd) -
+                  Math.max(conflict.startDatetime.getTime(), practice.datetime.getTime())) / 60000
+              ),
+            });
+          }
+        }
+      }
+    }
+
+    // Run facility checks if requested
+    if (options.types.includes('facility')) {
+      const facilityConflicts = await this.checkFacilityConflicts(schoolId, dateRange);
+      allConflicts.push(...facilityConflicts);
+    }
+
+    // person and resource are deferred - no-op for now
+
+    // Build summary
+    const byType: Record<string, number> = {};
+    const bySeverity: Record<string, number> = {};
+    for (const c of allConflicts) {
+      byType[c.type] = (byType[c.type] || 0) + 1;
+      bySeverity[c.severity] = (bySeverity[c.severity] || 0) + 1;
+    }
+
+    return {
+      conflicts: allConflicts,
+      summary: { total: allConflicts.length, byType, bySeverity },
+    };
+  },
+
+  // T-027: Suggest available time slots for a conflicting event
+  async suggestSlots(
+    schoolId: string,
+    options: {
+      facilityId: string;
+      date: string;
+      durationMinutes: number;
+      preferredTime?: string;
+    }
+  ): Promise<ScoredSlot[]> {
+    const targetDate = new Date(options.date);
+    const dayStart = new Date(targetDate);
+    dayStart.setHours(7, 0, 0, 0);
+    const dayEnd = new Date(targetDate);
+    dayEnd.setHours(22, 0, 0, 0);
+
+    // Get all events at this facility on this day
+    const [games, practices] = await Promise.all([
+      prisma.game.findMany({
+        where: {
+          facilityId: options.facilityId,
+          datetime: { gte: dayStart, lt: dayEnd },
+        },
+        select: { datetime: true },
+      }),
+      prisma.practice.findMany({
+        where: {
+          facilityId: options.facilityId,
+          datetime: { gte: dayStart, lt: dayEnd },
+        },
+        select: { datetime: true, durationMinutes: true },
+      }),
+    ]);
+
+    // Build list of occupied time ranges
+    const occupied: Array<{ start: number; end: number }> = [];
+    for (const game of games) {
+      occupied.push({
+        start: game.datetime.getTime(),
+        end: game.datetime.getTime() + 120 * 60000,
+      });
+    }
+    for (const practice of practices) {
+      occupied.push({
+        start: practice.datetime.getTime(),
+        end: practice.datetime.getTime() + practice.durationMinutes * 60000,
+      });
+    }
+
+    // Parse preferred time for scoring
+    let preferredMs: number | null = null;
+    if (options.preferredTime) {
+      const [hours, minutes] = options.preferredTime.split(':').map(Number);
+      const prefDate = new Date(targetDate);
+      prefDate.setHours(hours, minutes, 0, 0);
+      preferredMs = prefDate.getTime();
+    }
+
+    // Scan in 30-minute increments from 7am to 10pm
+    const slots: ScoredSlot[] = [];
+    const INCREMENT_MS = 30 * 60000;
+    const durationMs = options.durationMinutes * 60000;
+
+    for (let slotStart = dayStart.getTime(); slotStart + durationMs <= dayEnd.getTime(); slotStart += INCREMENT_MS) {
+      const slotEnd = slotStart + durationMs;
+
+      // Count conflicts for this slot
+      let conflictCount = 0;
+      for (const o of occupied) {
+        if (slotStart < o.end && slotEnd > o.start) {
+          conflictCount++;
+        }
+      }
+
+      // Calculate score (0-100)
+      let score = 100;
+      const reasons: string[] = [];
+
+      // Penalty for conflicts
+      if (conflictCount > 0) {
+        score -= conflictCount * 40;
+        reasons.push(`${conflictCount} conflict${conflictCount !== 1 ? 's' : ''}`);
+      } else {
+        reasons.push('No conflicts');
+      }
+
+      // Bonus for proximity to preferred time
+      if (preferredMs !== null) {
+        const distanceHours = Math.abs(slotStart - preferredMs) / (60 * 60000);
+        if (distanceHours <= 1) {
+          score += 10;
+          reasons.push('Close to preferred time');
+        } else if (distanceHours > 3) {
+          score -= 10;
+          reasons.push('Far from preferred time');
+        }
+      }
+
+      // Clamp score
+      score = Math.max(0, Math.min(100, score));
+
+      const slotStartDate = new Date(slotStart);
+      const slotEndDate = new Date(slotEnd);
+
+      slots.push({
+        startTime: slotStartDate.toTimeString().slice(0, 5),
+        endTime: slotEndDate.toTimeString().slice(0, 5),
+        date: options.date,
+        score,
+        conflictCount,
+        reasons,
+      });
+    }
+
+    // Sort by score desc, return top 5
+    slots.sort((a, b) => b.score - a.score);
+    return slots.slice(0, 5);
   },
 
   // Private helper

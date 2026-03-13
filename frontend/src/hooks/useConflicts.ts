@@ -6,6 +6,8 @@ import {
   type ConflictListQuery,
   type EventType,
   type BatchOverrideInput,
+  type CheckConflictsInput,
+  type SuggestSlotsInput,
 } from '../api/conflicts';
 
 // List all conflicts for a school (paginated)
@@ -92,5 +94,24 @@ export function useBatchOverride() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conflicts'] });
     },
+  });
+}
+
+// T-026: Check conflicts with enhanced detection
+export function useCheckConflicts(schoolId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CheckConflictsInput) => conflictsApi.checkConflicts(schoolId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conflicts'] });
+    },
+  });
+}
+
+// T-027: Get suggested alternative time slots
+export function useSuggestSlots(schoolId: string) {
+  return useMutation({
+    mutationFn: (input: SuggestSlotsInput) => conflictsApi.suggestSlots(schoolId, input),
   });
 }

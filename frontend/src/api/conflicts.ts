@@ -67,6 +67,7 @@ export interface ConflictListItem {
   teamName: string;
   teamLevel: string;
   facilityName: string | null;
+  facilityId?: string | null;
   seasonId: string;
   conflicts: Conflict[];
   overrideCount: number;
@@ -113,6 +114,69 @@ export interface BatchOverrideResult {
   errors: Array<{ eventId: string; error: string }>;
 }
 
+export type ConflictType = 'BLOCKER' | 'FACILITY' | 'PERSON' | 'RESOURCE';
+export type ConflictSeverity = 'ERROR' | 'WARNING';
+
+// T-025/T-030: TypedConflict for enhanced conflict detection
+export interface TypedConflict {
+  type: ConflictType;
+  severity: ConflictSeverity;
+  eventA: {
+    id: string;
+    type: 'GAME' | 'PRACTICE';
+    name: string;
+    datetime: string;
+    facilityName?: string;
+    teamName?: string;
+  };
+  eventB?: {
+    id: string;
+    type: 'GAME' | 'PRACTICE';
+    name: string;
+    datetime: string;
+    facilityName?: string;
+    teamName?: string;
+  };
+  blocker?: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  overlapMinutes: number;
+  suggestion?: ConflictSuggestion;
+}
+
+export interface ScoredSlot {
+  startTime: string;
+  endTime: string;
+  date: string;
+  score: number;
+  conflictCount: number;
+  reasons: string[];
+}
+
+export interface CheckConflictsInput {
+  eventId?: string;
+  dateRange?: { start: string; end: string };
+  types?: Array<'blocker' | 'facility' | 'person' | 'resource'>;
+}
+
+export interface CheckConflictsResponse {
+  conflicts: TypedConflict[];
+  summary: {
+    total: number;
+    byType: Record<string, number>;
+    bySeverity: Record<string, number>;
+  };
+}
+
+export interface SuggestSlotsInput {
+  facilityId: string;
+  date: string;
+  durationMinutes: number;
+  preferredTime?: string;
+}
+
 export interface ConflictListQuery {
   page?: number;
   limit?: number;
@@ -121,6 +185,7 @@ export interface ConflictListQuery {
   sortBy?: 'datetime' | 'blockerType';
   sortOrder?: 'asc' | 'desc';
   includeSuggestions?: boolean;
+  types?: string;
 }
 
 export const conflictsApi = {
@@ -134,6 +199,7 @@ export const conflictsApi = {
     if (query?.sortBy) params.append('sortBy', query.sortBy);
     if (query?.sortOrder) params.append('sortOrder', query.sortOrder);
     if (query?.includeSuggestions) params.append('includeSuggestions', 'true');
+    if (query?.types) params.append('types', query.types);
     const qs = params.toString();
     const { data } = await api.get(`/schools/${schoolId}/conflicts${qs ? `?${qs}` : ''}`);
     return data;
@@ -185,5 +251,17 @@ export const conflictsApi = {
   batchOverride: async (input: BatchOverrideInput): Promise<BatchOverrideResult> => {
     const { data } = await api.post('/conflicts/batch-override', input);
     return data.data;
+  },
+
+  // T-026: Check conflicts with enhanced detection
+  checkConflicts: async (schoolId: string, input: CheckConflictsInput): Promise<CheckConflictsResponse> => {
+    const { data } = await api.post(`/schools/${schoolId}/check-conflicts`, input);
+    return data.data;
+  },
+
+  // T-027: Get suggested alternative time slots
+  suggestSlots: async (schoolId: string, input: SuggestSlotsInput): Promise<ScoredSlot[]> => {
+    const { data } = await api.post(`/schools/${schoolId}/suggest-slots`, input);
+    return data.data.slots;
   },
 };
