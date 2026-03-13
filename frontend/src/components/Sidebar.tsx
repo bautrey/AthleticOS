@@ -37,19 +37,54 @@ export function Sidebar() {
           Calendar Feeds
         </NavLink>
 
+        <NavLink
+          to="/notifications/preferences"
+          className={({ isActive }) =>
+            `block px-4 py-2 rounded ${isActive ? 'bg-blue-600' : 'hover:bg-gray-800'}`
+          }
+        >
+          Notifications
+        </NavLink>
+
         {schools && schools.length > 0 && (
           <div className="mt-4">
             <div className="text-xs text-gray-500 uppercase px-4 mb-2">Schools</div>
             {schools.map((school) => (
-              <NavLink
-                key={school.id}
-                to={`/schools/${school.id}`}
-                className={({ isActive }) =>
-                  `block px-4 py-2 rounded text-sm ${isActive ? 'bg-blue-600' : 'hover:bg-gray-800'}`
-                }
-              >
-                {school.name}
-              </NavLink>
+              <div key={school.id}>
+                <NavLink
+                  to={`/schools/${school.id}`}
+                  end
+                  className={({ isActive }) =>
+                    `block px-4 py-2 rounded text-sm ${isActive ? 'bg-blue-600' : 'hover:bg-gray-800'}`
+                  }
+                >
+                  {school.name}
+                </NavLink>
+                <NavLink
+                  to={`/schools/${school.id}/weekly-board`}
+                  className={({ isActive }) =>
+                    `block px-6 py-1.5 rounded text-xs text-gray-400 ${isActive ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 hover:text-gray-200'}`
+                  }
+                >
+                  Weekly Board
+                </NavLink>
+                <NavLink
+                  to={`/schools/${school.id}/operations`}
+                  className={({ isActive }) =>
+                    `block px-6 py-1.5 rounded text-xs text-gray-400 ${isActive ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 hover:text-gray-200'}`
+                  }
+                >
+                  Operations
+                </NavLink>
+                <NavLink
+                  to={`/schools/${school.id}/facility-requests`}
+                  className={({ isActive }) =>
+                    `block px-6 py-1.5 rounded text-xs text-gray-400 ${isActive ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 hover:text-gray-200'}`
+                  }
+                >
+                  Facility Requests
+                </NavLink>
+              </div>
             ))}
           </div>
         )}

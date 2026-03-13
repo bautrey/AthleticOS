@@ -5,6 +5,7 @@ import { practicesApi, type Practice } from '../api/practices';
 import { facilitiesApi, type Facility } from '../api/facilities';
 import { CreatePracticeModal } from './CreatePracticeModal';
 import { EditPracticeModal } from './EditPracticeModal';
+import { RecurrenceBuilder } from './recurring/RecurrenceBuilder';
 import { EmptyState } from './EmptyState';
 import { ConflictBadge, ConflictDetailPanel } from './conflicts';
 import { useSeasonConflicts } from '../hooks/useConflicts';
@@ -41,6 +42,7 @@ const formatDuration = (minutes: number): string => {
 
 export function PracticesTab({ seasonId, schoolId }: PracticesTabProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isRecurringOpen, setIsRecurringOpen] = useState(false);
   const [editingPractice, setEditingPractice] = useState<Practice | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<{
     practice: Practice;
@@ -93,12 +95,20 @@ export function PracticesTab({ seasonId, schoolId }: PracticesTabProps) {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-        >
-          + Add Practice
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsRecurringOpen(true)}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm border border-gray-300"
+          >
+            Create Recurring
+          </button>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+          >
+            + Add Practice
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -187,6 +197,13 @@ export function PracticesTab({ seasonId, schoolId }: PracticesTabProps) {
           conflicts={selectedEvent.conflicts}
         />
       )}
+
+      <RecurrenceBuilder
+        schoolId={schoolId}
+        seasonId={seasonId}
+        isOpen={isRecurringOpen}
+        onClose={() => setIsRecurringOpen(false)}
+      />
     </div>
   );
 }

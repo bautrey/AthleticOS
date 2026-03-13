@@ -22,6 +22,12 @@ import { eventsRoutes } from './modules/events/routes.js';
 import { ideasRoutes } from './modules/ideas/routes.js';
 import { inviteRoutes } from './modules/invites/routes.js';
 import { calendarFeedsRoutes, publicCalendarFeedRoutes } from './modules/calendar-feeds/routes.js';
+import { notificationsRoutes } from './modules/notifications/routes.js';
+import { recurringRoutes } from './modules/recurring/routes.js';
+import { facilityRequestRoutes } from './modules/facility-requests/routes.js';
+import { bulkOpsRoutes } from './modules/bulk-ops/routes.js';
+import { operationsRoutes } from './modules/operations/routes.js';
+import { quickAddRoutes } from './modules/quick-add/routes.js';
 import { AppError } from './common/errors.js';
 import { ZodError } from 'zod';
 
@@ -86,6 +92,12 @@ await app.register(async (api) => {
   await api.register(ideasRoutes);
   await api.register(inviteRoutes);
   await api.register(calendarFeedsRoutes);
+  await api.register(notificationsRoutes);
+  await api.register(recurringRoutes);
+  await api.register(facilityRequestRoutes);
+  await api.register(bulkOpsRoutes);
+  await api.register(operationsRoutes);
+  await api.register(quickAddRoutes);
 }, { prefix: '/api/v1' });
 
 // Start

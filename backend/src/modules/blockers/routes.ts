@@ -10,6 +10,7 @@ import {
   type UpdateBlockerInput,
   type BlockerQuery,
 } from './schemas.js';
+import { notificationService } from '../notifications/service.js';
 
 interface SchoolParams {
   schoolId: string;
@@ -65,6 +66,14 @@ export async function blockersRoutes(app: FastifyInstance) {
         data,
         userId
       );
+      // Fire-and-forget notification (WEATHER_ALERT for weather blockers, SCHEDULE_CHANGE otherwise)
+      const trigger = data.type === 'WEATHER' ? 'WEATHER_ALERT' as const : 'SCHEDULE_CHANGE' as const;
+      notificationService.emit({
+        trigger,
+        schoolId: request.params.schoolId,
+        eventType: 'BLOCKER',
+        eventId: result.blocker.id,
+      }).catch(err => request.log.error(err));
       return reply.status(201).send({
         data: result.blocker,
         meta: { conflictingEvents: result.conflictingEvents },

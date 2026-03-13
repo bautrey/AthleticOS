@@ -14,6 +14,14 @@ import { PublicScheduleEmbed } from './pages/PublicScheduleEmbed';
 import { ConflictsPage } from './pages/ConflictsPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import { CalendarFeedsPage } from './pages/CalendarFeedsPage';
+import { NotificationPrefsPage } from './pages/NotificationPrefsPage';
+import { NotificationLogPage } from './pages/NotificationLogPage';
+import { SmsOptOutPage } from './pages/SmsOptOutPage';
+import { WeeklyBoardPage } from './pages/WeeklyBoardPage';
+import { OperationsReadinessPage } from './pages/OperationsReadinessPage';
+import { FacilityRequestsPage } from './pages/FacilityRequestsPage';
+import { FacilityAvailabilityPage } from './pages/FacilityAvailabilityPage';
+import { CommunityPortalPage } from './pages/CommunityPortalPage';
 
 const queryClient = new QueryClient();
 
@@ -34,6 +42,8 @@ function AppRoutes() {
       <Route path="/s/:token" element={<PublicSchedulePage />} />
       <Route path="/s/:token/embed" element={<PublicScheduleEmbed />} />
       <Route path="/invite/:token" element={<AcceptInvitePage />} />
+      <Route path="/sms-opt-out/:token" element={<SmsOptOutPage />} />
+      <Route path="/community/:schoolId" element={<CommunityPortalPage />} />
 
       {/* Auth routes */}
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
@@ -47,6 +57,12 @@ function AppRoutes() {
       <Route path="/schools/:schoolId/settings/priority-rules" element={<ProtectedRoute><PriorityRulesPage /></ProtectedRoute>} />
       <Route path="/schools/:schoolId/seasons/:seasonId" element={<ProtectedRoute><SeasonDetail /></ProtectedRoute>} />
       <Route path="/calendar-feeds" element={<ProtectedRoute><CalendarFeedsPage /></ProtectedRoute>} />
+      <Route path="/notifications/preferences" element={<ProtectedRoute><NotificationPrefsPage /></ProtectedRoute>} />
+      <Route path="/schools/:schoolId/notifications" element={<ProtectedRoute><NotificationLogPage /></ProtectedRoute>} />
+      <Route path="/schools/:schoolId/weekly-board" element={<ProtectedRoute><WeeklyBoardPage /></ProtectedRoute>} />
+      <Route path="/schools/:schoolId/operations" element={<ProtectedRoute><OperationsReadinessPage /></ProtectedRoute>} />
+      <Route path="/schools/:schoolId/facility-requests" element={<ProtectedRoute><FacilityRequestsPage /></ProtectedRoute>} />
+      <Route path="/schools/:schoolId/facilities/:facilityId/availability" element={<ProtectedRoute><FacilityAvailabilityPage /></ProtectedRoute>} />
     </Routes>
   );
 }

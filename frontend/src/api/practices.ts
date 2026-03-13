@@ -8,6 +8,7 @@ export interface Practice {
   datetime: string;
   durationMinutes: number;
   notes: string | null;
+  recurrenceGroupId: string | null;
   createdAt: string;
   updatedAt: string;
 }

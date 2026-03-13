@@ -4,6 +4,8 @@ import { authenticate, requireRole, STAFF, ALL_INTERNAL } from '../../common/mid
 import { createPracticeSchema, updatePracticeSchema } from './schemas.js';
 import { practicesService } from './service.js';
 import { conflictService } from '../conflicts/service.js';
+import { notificationService } from '../notifications/service.js';
+import { prisma } from '../../common/db.js';
 
 export async function practicesRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -32,6 +34,12 @@ export async function practicesRoutes(app: FastifyInstance) {
       seasonId: practice.seasonId,
       facilityId: practice.facilityId,
     });
+
+    // Fire-and-forget notification
+    const season = await prisma.season.findUnique({ where: { id: seasonId }, select: { team: { select: { schoolId: true } } } });
+    if (season) {
+      notificationService.emit({ trigger: 'SCHEDULE_CHANGE', schoolId: season.team.schoolId, eventType: 'PRACTICE', eventId: practice.id }).catch(err => request.log.error(err));
+    }
 
     return reply.status(201).send({
       data: practice,
@@ -63,6 +71,12 @@ export async function practicesRoutes(app: FastifyInstance) {
       facilityId: practice.facilityId,
     });
 
+    // Fire-and-forget notification
+    const season = await prisma.season.findUnique({ where: { id: practice.seasonId }, select: { team: { select: { schoolId: true } } } });
+    if (season) {
+      notificationService.emit({ trigger: 'SCHEDULE_CHANGE', schoolId: season.team.schoolId, eventType: 'PRACTICE', eventId: practice.id, changes: input as Record<string, unknown> }).catch(err => request.log.error(err));
+    }
+
     return {
       data: practice,
       meta: {
@@ -75,7 +89,12 @@ export async function practicesRoutes(app: FastifyInstance) {
   // Delete practice
   app.delete('/practices/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const practice = await practicesService.findById(id);
+    const season = await prisma.season.findUnique({ where: { id: practice.seasonId }, select: { team: { select: { schoolId: true } } } });
     await practicesService.delete(id);
+    if (season) {
+      notificationService.emit({ trigger: 'SCHEDULE_CHANGE', schoolId: season.team.schoolId, eventType: 'PRACTICE', eventId: id }).catch(err => request.log.error(err));
+    }
     return reply.status(204).send();
   });
 }

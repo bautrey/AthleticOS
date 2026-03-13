@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from './Modal';
 import { practicesApi, type Practice } from '../api/practices';
 import { facilitiesApi } from '../api/facilities';
+import { useUpdateSeries, useDeleteSeries } from '../hooks/useRecurring';
 
 interface EditPracticeModalProps {
   practice: Practice;
@@ -18,13 +19,18 @@ export function EditPracticeModal({ practice, schoolId, isOpen, onClose }: EditP
   const [facilityId, setFacilityId] = useState(practice.facilityId || '');
   const [notes, setNotes] = useState(practice.notes || '');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSeriesDeleteConfirm, setShowSeriesDeleteConfirm] = useState(false);
   const queryClient = useQueryClient();
+
+  const isRecurring = !!practice.recurrenceGroupId;
+
+  const updateSeriesMutation = useUpdateSeries(schoolId);
+  const deleteSeriesMutation = useDeleteSeries(schoolId);
 
   // Format datetime for input on mount/practice change
   useEffect(() => {
     if (practice.datetime) {
       const date = new Date(practice.datetime);
-      // Format as YYYY-MM-DDTHH:mm for datetime-local input
       const formatted = date.toISOString().slice(0, 16);
       setDatetime(formatted);
     }
@@ -72,7 +78,40 @@ export function EditPracticeModal({ practice, schoolId, isOpen, onClose }: EditP
     deleteMutation.mutate();
   };
 
-  const isPending = updateMutation.isPending || deleteMutation.isPending;
+  const handleModifySeries = () => {
+    if (!practice.recurrenceGroupId) return;
+    updateSeriesMutation.mutate(
+      {
+        groupId: practice.recurrenceGroupId,
+        input: {
+          facilityId: facilityId || undefined,
+          notes: notes || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['practices', practice.seasonId] });
+          onClose();
+        },
+      },
+    );
+  };
+
+  const handleCancelSeries = () => {
+    if (!practice.recurrenceGroupId) return;
+    deleteSeriesMutation.mutate(practice.recurrenceGroupId, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['practices', practice.seasonId] });
+        onClose();
+      },
+    });
+  };
+
+  const isPending =
+    updateMutation.isPending ||
+    deleteMutation.isPending ||
+    updateSeriesMutation.isPending ||
+    deleteSeriesMutation.isPending;
 
   const formatDateForDisplay = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -110,15 +149,48 @@ export function EditPracticeModal({ practice, schoolId, isOpen, onClose }: EditP
             </button>
           </div>
         </div>
+      ) : showSeriesDeleteConfirm ? (
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            Are you sure you want to cancel all <strong>future practices</strong> in this recurring series? Past practices will not be affected.
+          </p>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setShowSeriesDeleteConfirm(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+              disabled={deleteSeriesMutation.isPending}
+            >
+              Go Back
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelSeries}
+              disabled={deleteSeriesMutation.isPending}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleteSeriesMutation.isPending ? 'Cancelling...' : 'Cancel Future Practices'}
+            </button>
+          </div>
+        </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {(updateMutation.error || deleteMutation.error) && (
+          {(updateMutation.error || deleteMutation.error || updateSeriesMutation.error || deleteSeriesMutation.error) && (
             <div className="bg-red-50 text-red-600 p-3 rounded text-sm">
               {updateMutation.error instanceof Error ? updateMutation.error.message :
                deleteMutation.error instanceof Error ? deleteMutation.error.message :
+               updateSeriesMutation.error instanceof Error ? updateSeriesMutation.error.message :
+               deleteSeriesMutation.error instanceof Error ? deleteSeriesMutation.error.message :
                'Failed to update practice'}
             </div>
           )}
+
+          {isRecurring && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800">
+              This practice is part of a recurring series.
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Date & Time
@@ -178,6 +250,29 @@ export function EditPracticeModal({ practice, schoolId, isOpen, onClose }: EditP
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {/* Series actions */}
+          {isRecurring && (
+            <div className="flex gap-2 pt-2 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handleModifySeries}
+                disabled={isPending}
+                className="px-3 py-1.5 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 disabled:opacity-50"
+              >
+                {updateSeriesMutation.isPending ? 'Updating...' : 'Modify Series'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSeriesDeleteConfirm(true)}
+                disabled={isPending}
+                className="px-3 py-1.5 text-sm text-red-700 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 disabled:opacity-50"
+              >
+                Cancel Series
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-between pt-4">
             <button
               type="button"
