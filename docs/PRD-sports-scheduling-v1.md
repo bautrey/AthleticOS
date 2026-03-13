@@ -1,7 +1,6 @@
 # AthleticOS Sports Scheduling — PRD v1
 
 > **Status:** Draft
-> **Author:** Engineering
 > **Date:** 2026-03-13
 > **Target:** AthleticOS v1 MVP
 
@@ -23,7 +22,53 @@ High school coaches spend 30-60 minutes per week juggling spreadsheets, group te
 
 ---
 
-## 3. User Personas & Roles
+## 3. What Already Exists
+
+Before specifying new work, here's the foundation we're building on. These are **shipped and working:**
+
+### Scheduling Core
+- **Game & Practice CRUD** — Full create/read/update/delete with Fastify routes, Zod validation, Prisma persistence. Games track opponent, home/away, status. Practices track duration. Both link to facilities and seasons.
+- **Calendar list view** (`CalendarTab.tsx`) — Events grouped by date, sorted chronologically, with conflict badges and click-to-edit modals.
+- **CSV import** — Bulk import games/practices from CSV with facility fuzzy-matching and conflict preview.
+
+### Conflict Detection
+- **Blocker-based conflicts** (`conflicts/service.ts`, 715 lines) — Checks events against blockers (exam, weather, maintenance, holiday, etc.) scoped to school, team, or facility. Includes time-range overlap logic, paginated conflict list, and batch override capability.
+- **Conflict triage page** (`ConflictsPage.tsx`) — Filter, sort, and batch-override conflicts. Suggestion engine scores events by priority rules.
+- **Priority rules** — Configurable weights (team level, season status, event type, home/away) for conflict resolution recommendations.
+
+### Blockers & Weather
+- **Full blocker system** (`blockers/service.ts`) — CRUD for blockers with types (WEATHER, EXAM, MAINTENANCE, EVENT, TRAVEL, HOLIDAY, CUSTOM), scopes (SCHOOL_WIDE, TEAM, FACILITY), datetime ranges. Shows affected events when a blocker is created.
+- **BlockersPage** — Create/edit/delete blockers with type filtering and affected-event display.
+
+### Users & Roles
+- **Auth system** — JWT login/register with refresh tokens, password hashing.
+- **Role enum** — ADMIN, ATHLETIC_DIRECTOR, COACH, PARENT, ATHLETE.
+- **SchoolUser** — Links users to schools with role assignment.
+- **Invite system** (`invites/service.ts`) — Email invitations with role, 7-day token expiry, accept/revoke flow.
+- **School members UI** (`SchoolMembers.tsx`) — View and manage members.
+
+### Schedule Sharing
+- **Share links** (`shares/service.ts`) — Token-based public schedule URLs with configurable display (show/hide notes, facility), expiration, view counting.
+- **iCal export** (`shares/public-routes.ts`) — `GET /public/schedules/:token/calendar` returns valid .ics file with games + practices. Rate-limited.
+- **Embed code** — Generates iframe HTML for embedding schedules on websites.
+- **Public schedule page** — Renders shared schedules without auth.
+
+### Data Model (already in schema)
+- School, Team (with level: VARSITY/JV/FRESHMAN), Season, Facility (with type: GYM/FIELD/POOL/COURT/TRACK/OTHER), TimeSlot
+- Game, Practice
+- Blocker, ConflictOverride
+- ScheduleShare, PriorityRule + audit
+- User, SchoolUser, Invite
+
+### Schema Additions (committed, not yet implemented)
+- Resource, EventResource — CRUD service and routes exist
+- EventParticipant — Table exists, no conflict logic wired up
+- Notification, NotificationPreference — Tables exist, no service
+- CalendarFeed — Table exists, no service
+
+---
+
+## 4. User Personas & Roles
 
 | Persona | Role | Core Need |
 |---------|------|-----------|
@@ -33,7 +78,7 @@ High school coaches spend 30-60 minutes per week juggling spreadsheets, group te
 | Parent | `PARENT` | See child's schedule, get SMS/email for changes, iCal sync |
 | Admin | `ADMIN` | Full system access, manage school settings |
 
-### Permission Matrix
+### Permission Matrix (NEW — not currently enforced)
 
 | Action | Admin | AD | Coach | Parent | Athlete |
 |--------|-------|----|-------|--------|---------|
@@ -47,75 +92,88 @@ High school coaches spend 30-60 minutes per week juggling spreadsheets, group te
 
 ---
 
-## 4. Must-Have Features (v1)
+## 5. New Features (What Needs to Be Built)
 
-### 4.1 Weekly Board
+### 5.1 Weekly Board — Upgrade from List to Grid
 
-**Description:** A drag-and-drop weekly calendar view showing all events for a season, team, or facility.
+**What exists:** `CalendarTab.tsx` renders events as a date-grouped vertical list with conflict badges and click-to-edit.
+
+**What to build:**
+- Grid layout: Mon-Sun columns × 30-minute time rows (7am-10pm)
+- Event cards positioned by time, colored by type (blue=game, green=practice)
+- Drag-and-drop to reschedule (saves on drop, optimistic UI)
+- Click empty slot → quick-create popover
+- Inline edit: click event card fields (time, facility) to edit without modal
+- Keyboard shortcuts: N=new, E=edit, Delete=remove, arrows=navigate
+- Responsive: stacks to existing list view on mobile (<768px)
+- AD facility filter: view all teams' events for a specific facility
 
 **User Stories:**
-- US-1.1: As a coach, I can view my team's week at a glance so I know what's scheduled.
-- US-1.2: As a coach, I can drag an event to a different time slot so I can reschedule in one gesture.
-- US-1.3: As a coach, I can inline-edit time, field, and team on any event without opening a modal.
-- US-1.4: As a coach, I can use keyboard shortcuts (N = new event, E = edit, Delete = remove, arrow keys = navigate) so I can schedule without a mouse.
-- US-1.5: As an AD, I can view all teams' events on a single board filtered by facility to check utilization.
+- US-1.1: As a coach, I can view my team's week in a grid so I see time-of-day distribution at a glance.
+- US-1.2: As a coach, I can drag an event to a different time slot to reschedule in one gesture.
+- US-1.3: As a coach, I can inline-edit time/field on any event without opening a modal.
+- US-1.4: As an AD, I can filter the board by facility to check utilization across all teams.
 
 **Acceptance Criteria:**
-- [ ] Week view renders Mon-Sun columns with 30-minute time rows (7am-10pm)
-- [ ] Events display as colored cards (blue=game, green=practice) with team name, time, facility
-- [ ] Drag-and-drop moves an event and saves on drop (optimistic UI)
-- [ ] Click on empty slot opens quick-create popover
-- [ ] Conflict badges appear inline on cards with overlap issues
-- [ ] Board is responsive — stacks to list view on mobile (<768px)
-- [ ] Keyboard navigation: arrow keys move focus, Enter opens edit, N creates new
+- [ ] Week grid renders with time rows and day columns
+- [ ] Events positioned by datetime, sized by duration
+- [ ] Drag-and-drop triggers PATCH to games/practices API + conflict check
+- [ ] Conflict badges carried over from existing CalendarTab
+- [ ] Falls back to list view on mobile
+- [ ] Keyboard shortcuts work when board is focused
 
-### 4.2 Auto-Conflict Detection
+---
 
-**Description:** Real-time conflict engine that flags double-booked fields, buses, refs, and multi-sport athletes. Suggests nearest open slot.
+### 5.2 Enhanced Conflict Detection — Multi-Sport Athletes, Resources, Facilities
+
+**What exists:** Conflict engine checks events against blockers (school-wide, team, facility scopes). ConflictOverride for acknowledged conflicts. Priority-based suggestions.
+
+**What to build (extend `conflicts/service.ts` and new `scheduling-engine.ts`):**
+
+1. **Facility double-booking** — Query games + practices at same `facility_id` with overlapping times. Currently only checks blockers, not other events.
+2. **Multi-sport athlete overlap** — When EventParticipant records exist, detect when a person is in two events overlapping by >5 minutes.
+3. **Resource uniqueness** — Detect when a bus/ref (EventResource) is assigned to two overlapping events.
+4. **Smart slot suggestions** — Scan next 10 open 30-min slots, score by proximity + notification count.
+
+**Conflict Rules (ordered by severity):**
+1. `error`: Facility double-booked (same facility_id, overlapping time)
+2. `error`: Resource double-booked (same resource, overlapping time)
+3. `warning`: Person in overlapping events (>5 min overlap)
+4. Existing: Blocker overlap (school-wide, team, facility scope)
 
 **User Stories:**
-- US-2.1: As a coach, I see a red badge on any event that has a facility conflict so I can fix it before publishing.
-- US-2.2: As a coach, I'm warned when a multi-sport athlete is double-booked so I can coordinate with the other coach.
-- US-2.3: As an AD, I see when a bus or referee is assigned to overlapping events.
-- US-2.4: As a coach, when I see a conflict, I can click "Suggest Slot" and get the next 10 open slots scored by least disruption.
-
-**Conflict Rules:**
-1. No overlapping events on the same `facility_id`
-2. No person in two events overlapping by >5 minutes (multi-sport athlete check)
-3. Resource uniqueness per time block (bus/ref can only be in one place)
-4. Blocker overlap (existing: exam, weather, maintenance, etc.)
+- US-2.1: As a coach, I'm warned when my event overlaps another team's event at the same facility.
+- US-2.2: As a coach, I'm warned when a multi-sport athlete has a time conflict.
+- US-2.3: As an AD, I see when a bus or ref is double-booked.
+- US-2.4: As a coach, I can click "Suggest Slot" to get alternatives ranked by least disruption.
 
 **Acceptance Criteria:**
-- [ ] Creating/moving an event triggers conflict check before save
-- [ ] Conflicts appear as badges on the event card with count + type icons
-- [ ] Clicking a conflict badge shows detail panel: what's conflicting, who, when
-- [ ] "Suggest Open Slot" scans next 10 available slots, sorted by (proximity to original time × notification count)
-- [ ] Conflict check runs in <200ms for typical school (10 teams, 50 events/week)
+- [ ] Creating/moving an event triggers full conflict check (facility + person + resource + blocker)
+- [ ] Conflict badges on event cards show type icons (facility, person, resource)
+- [ ] "Suggest Open Slot" returns top 10 slots scored by `hoursDiff + warningCount * 2`
+- [ ] Conflict check < 200ms for typical school (10 teams, 50 events/week)
+- [ ] New conflict types appear in existing ConflictsPage alongside blocker conflicts
 
-### 4.3 Roster & Participants
+**New API Endpoints:**
+```
+POST /api/v1/schools/:schoolId/check-conflicts   → Full conflict check
+POST /api/v1/schools/:schoolId/suggest-slots      → Smart slot suggestions
+```
 
-**Description:** Track which athletes/coaches are on each team and assigned to each event, enabling multi-sport conflict detection.
+---
 
-**User Stories:**
-- US-3.1: As a coach, I can see my team roster with contact info.
-- US-3.2: As an AD, I can see which athletes play multiple sports and flag scheduling conflicts.
-- US-3.3: As a coach, I can assign specific athletes to an event (optional — defaults to full team).
+### 5.3 Notifications — SMS + Email on Event Changes
 
-**Acceptance Criteria:**
-- [ ] Team roster shows members with role, email, phone
-- [ ] Event detail shows participant list
-- [ ] Multi-sport athletes are highlighted in conflict reports
-- [ ] Participant assignment is optional (events without explicit participants are treated as whole-team)
+**What exists:** Schema for Notification + NotificationPreference. Email sending for invites (Resend). Twilio config vars in env. Empty `notifications/` module.
 
-### 4.4 Notifications
+**What to build:**
 
-**Description:** SMS + email notifications for event creation, changes, and cancellations. Parents get opt-in digest mode.
-
-**User Stories:**
-- US-4.1: As a parent, I receive a single concise SMS when my child's practice is moved, with a link to the updated schedule.
-- US-4.2: As a parent, I can opt into a nightly digest that summarizes only changes, instead of individual messages.
-- US-4.3: As a coach, I can set quiet hours so notifications aren't sent during school hours.
-- US-4.4: As an athlete, I receive an email when a new game is added to my schedule.
+1. **Notification service** — On game/practice create/update/cancel, create Notification records and send via Resend (email) or Twilio (SMS).
+2. **Notification preferences** — CRUD for per-user, per-school settings (email on/off, SMS on/off, quiet hours, digest).
+3. **Quiet hours** — Queue messages during quiet window, send when window ends.
+4. **Nightly digest** — Batch all changes from past 24 hours into single email for parents who opt in.
+5. **SMS opt-out** — Twilio webhook to honor STOP replies.
+6. **Preferences UI** — Settings panel for notification config.
 
 **Notification Triggers:**
 | Trigger | Channel | Recipients |
@@ -125,276 +183,239 @@ High school coaches spend 30-60 minutes per week juggling spreadsheets, group te
 | Event cancelled | SMS + Email | Team members + parents |
 | Nightly digest | Email | Parents with digest opt-in |
 
-**SMS Template Example:**
+**SMS Template:**
 ```
 [AthleticOS] Varsity Soccer practice MOVED to Tue 3:30pm @ Gym A.
 View: {deep_link}
 Reply STOP to opt out.
 ```
 
+**User Stories:**
+- US-3.1: As a parent, I get an SMS when my child's practice is moved with a link to the updated schedule.
+- US-3.2: As a parent, I can opt into a nightly digest instead of individual messages.
+- US-3.3: As a coach, I can set quiet hours so notifications aren't sent during school hours.
+- US-3.4: As an athlete, I get an email when a new game is added to my schedule.
+
 **Acceptance Criteria:**
-- [ ] SMS sent via Twilio/MessageBird on event change/cancel
+- [ ] SMS sent via Twilio on event change/cancel
 - [ ] Email sent via Resend on event create/change/cancel
-- [ ] Users can set notification preferences per school (email on/off, SMS on/off, quiet hours, digest)
-- [ ] Quiet hours respected (messages queued until quiet window ends)
+- [ ] Preferences UI: email on/off, SMS on/off, quiet hours, digest toggle
+- [ ] Quiet hours respected (messages queued)
 - [ ] SMS opt-out via STOP reply honored
-- [ ] Nightly digest email batches all changes from past 24 hours
+- [ ] Nightly digest batches changes from past 24 hours
 
-### 4.5 Calendar Sync (iCal Feeds)
-
-**Description:** One-way iCal (.ics) links for Google/Apple/Outlook per team, per athlete, or per parent.
-
-**User Stories:**
-- US-5.1: As a parent, I can subscribe to my child's team schedule in my phone calendar.
-- US-5.2: As a coach, I can share a team calendar link that auto-updates when I make changes.
-- US-5.3: As an athlete, I can get a personal feed that includes all my teams' events.
-
-**Acceptance Criteria:**
-- [ ] Each calendar feed has a unique, unguessable token URL
-- [ ] Feed returns valid iCalendar (.ics) format with VEVENT entries
-- [ ] Events include: summary, start/end time, location (facility name), description (notes), status
-- [ ] Cancelled events show as CANCELLED status in iCal
-- [ ] Feed scoped to team (all events) or user (events for all their teams)
-- [ ] Feeds can be deactivated without deleting
-
-### 4.6 Weather & Blackout Windows
-
-**Description:** When lightning, field closure, or other weather events occur, propose reschedule for all affected outdoor events.
-
-**User Stories:**
-- US-6.1: As a coach, I can mark "Rain Plan" which moves all outdoor events to a designated indoor facility template.
-- US-6.2: As an AD, I can create a weather blocker that auto-flags all outdoor events in the window.
-
-**Note:** The existing Blocker model (type=WEATHER, scope=FACILITY/SCHOOL_WIDE) already supports this. This feature extends it with:
-- One-click "Rain Plan" bulk action
-- Template for indoor fallback facility per outdoor facility
-
-**Acceptance Criteria:**
-- [ ] "Rain Plan" button on weekly board triggers bulk move of outdoor events to rain facilities
-- [ ] Rain facility mapping: each outdoor facility can have a designated indoor fallback
-- [ ] Coach can preview affected events before confirming the bulk move
-- [ ] Notifications sent for all moved events
-
-### 4.7 Export & Print
-
-**Description:** One-page printable week view for the locker room bulletin board.
-
-**User Stories:**
-- US-7.1: As a coach, I can print this week's schedule as a clean one-pager.
-- US-7.2: As an AD, I can export a facility utilization report for the week.
-
-**Acceptance Criteria:**
-- [ ] "Print" button generates a clean, ink-friendly week view
-- [ ] Print view shows: day, time, team, event type, facility, opponent (for games)
-- [ ] CSS @media print styles hide nav, buttons, and non-essential UI
-- [ ] Export as PDF option (using browser print-to-PDF)
+**New API Endpoints:**
+```
+GET  /api/v1/notifications/preferences             → Get user's preferences
+PUT  /api/v1/notifications/preferences             → Update preferences
+GET  /api/v1/schools/:schoolId/notifications        → List notifications (admin)
+POST /api/v1/schools/:schoolId/notifications/test   → Send test notification
+```
 
 ---
 
-## 5. Coach-Speed Workflows
+### 5.4 Personal Calendar Feeds
 
-### 5.1 Quick Add
+**What exists:** iCal export works through schedule share tokens (`GET /public/schedules/:token/calendar`). CalendarFeed model in schema. No CalendarFeed service or routes.
 
-**Syntax:** `"Tue 3:30-5pm Gym A (Varsity)"` typed into a quick-add bar
+**What to build:**
+1. **CalendarFeed service** — Create/list/deactivate personal feed tokens.
+2. **Team feed** — All events for one team across seasons.
+3. **User feed** — All events across all the user's teams (multi-sport athletes see everything).
+4. **Public feed endpoint** — `GET /cal/:token.ics` returns dynamically generated iCal.
+5. **Feed management UI** — Generate/copy/deactivate feed URLs.
+
+**User Stories:**
+- US-4.1: As a parent, I can subscribe to my child's team schedule in my phone calendar.
+- US-4.2: As an athlete, I get a personal feed that includes all my teams' events.
+- US-4.3: As a coach, I can generate a team calendar link that auto-updates.
+
+**Acceptance Criteria:**
+- [ ] `POST /api/v1/calendar-feeds` creates a feed with team or user scope
+- [ ] `GET /cal/:token.ics` returns valid iCalendar with VEVENT entries (reuse existing `generateICS()`)
+- [ ] User feeds include events from all teams the user belongs to
+- [ ] Feeds can be deactivated without deleting
+- [ ] UI shows feed URLs with copy-to-clipboard
+
+**New API Endpoints:**
+```
+POST   /api/v1/calendar-feeds          → Create feed
+GET    /api/v1/calendar-feeds          → List user's feeds
+DELETE /api/v1/calendar-feeds/:id      → Deactivate feed
+GET    /cal/:token.ics                 → Public iCal feed (no auth)
+```
+
+---
+
+### 5.5 Quick-Add Event Parsing
+
+**What exists:** Nothing. Empty `quick-add/` module.
+
+**What to build:** A text input bar on the weekly board that parses natural language into an event.
+
+**Syntax:** `"Tue 3:30-5pm Gym A (Varsity)"`
 
 **Parsing Rules:**
-- Day of week → maps to next occurrence
-- Time range → start/end time
+- Day of week → next occurrence from today
+- Time range → start/end (calculate durationMinutes)
 - Facility name → fuzzy match against school's facilities
 - Team name in parens → fuzzy match against school's teams
-- If no team specified → defaults to current season's team
+- If no team → default to current season's team
+- "vs [opponent]" → creates a Game instead of Practice
+
+**User Stories:**
+- US-5.1: As a coach, I can type "Tue 3:30-5pm Gym A" and create a practice in seconds.
+- US-5.2: As a coach, I can type "Sat 10am vs Oak Ridge Field A" and create a game.
 
 **Acceptance Criteria:**
 - [ ] Quick-add bar at top of weekly board
-- [ ] Parses day, time, facility, and team from natural text
+- [ ] Parses day, time range, facility, team from text
 - [ ] Shows preview card before confirming
+- [ ] Runs conflict check on parsed event before save
 - [ ] Falls back to standard create form if parsing fails
 
-### 5.2 Bulk Move
+**New API Endpoint:**
+```
+POST /api/v1/schools/:schoolId/quick-add  → Parse text → event preview
+```
 
-**Description:** Shift an entire week's events by N minutes (e.g., daylight saving time adjustment).
+---
+
+### 5.6 Bulk Operations — Shift Week + Rain Plan
+
+**What exists:** Blocker system (WEATHER type). Batch conflict override on ConflictsPage. Empty `bulk-ops/` module.
+
+**What to build:**
+
+1. **Shift Week** — Move all events in a date range by N minutes.
+   - Use case: daylight saving, adjusted dismissal times.
+   - Preview affected events with old → new times before confirming.
+   - Trigger notifications for all moved events.
+
+2. **Rain Plan** — One click moves outdoor events to indoor fallback facilities.
+   - Facility rain mapping: each FIELD/COURT/TRACK can designate a GYM/OTHER as fallback.
+   - Preview affected events + any conflicts at indoor facility.
+   - Trigger notifications for all moved events.
+
+**User Stories:**
+- US-6.1: As a coach, I can shift all my practices 30 minutes later for daylight saving.
+- US-6.2: As a coach, I can trigger a rain plan that moves outdoor events to designated indoor facilities.
+- US-6.3: As an AD, I can preview what the rain plan will do before confirming.
 
 **Acceptance Criteria:**
-- [ ] "Shift Week" action on weekly board: select week + offset in minutes
+- [ ] "Shift Week" on weekly board: select date range + offset in minutes
 - [ ] Preview shows all affected events with old → new times
-- [ ] Confirm triggers batch update + notifications
-- [ ] Undo available for 5 minutes after bulk move
+- [ ] Confirm triggers batch PATCH + notifications
+- [ ] "Rain Plan" on weekly board: moves FIELD/COURT/TRACK events to mapped indoor facilities
+- [ ] Rain plan shows conflicts if indoor facility already booked
+- [ ] Both operations trigger notifications for affected team members
 
-### 5.3 Rain Plan
+**New API Endpoints:**
+```
+POST /api/v1/schools/:schoolId/bulk-move   → Shift events by offset
+POST /api/v1/schools/:schoolId/rain-plan   → Execute rain plan
+```
 
-**Description:** One click moves all outdoor events to indoor fallback facilities.
+---
+
+### 5.7 Role-Based Permission Enforcement
+
+**What exists:** Roles assigned via SchoolUser. `requireRole()` middleware exists in `auth.ts` but is not applied to most routes.
+
+**What to build:** Apply `requireRole()` checks to all mutation routes.
+
+| Route Group | Allowed Roles |
+|-------------|---------------|
+| Create/edit games, practices | ADMIN, ATHLETIC_DIRECTOR, COACH |
+| Manage facilities | ADMIN, ATHLETIC_DIRECTOR |
+| Manage resources | ADMIN, ATHLETIC_DIRECTOR |
+| Override conflicts | ADMIN, ATHLETIC_DIRECTOR, COACH |
+| Manage school settings | ADMIN |
+| View-only (events, calendar) | All roles |
 
 **Acceptance Criteria:**
-- [ ] "Rain Plan" button on weekly board
-- [ ] Uses facility rain mapping (outdoor → indoor fallback)
-- [ ] Shows conflicts if indoor facility is already booked
-- [ ] Sends notifications for all moved events
+- [ ] All mutation routes check user role via `requireRole()` middleware
+- [ ] Coach can only modify events for their own team's seasons
+- [ ] Parent/Athlete get 403 on mutation endpoints
+- [ ] AD can modify any team within their school
 
 ---
 
-## 6. Data Model
+### 5.8 Print-Friendly Week View
 
-### Existing Models (already in schema)
-- `School`, `Team`, `Season`, `Facility`, `TimeSlot`
-- `Game`, `Practice`
-- `Blocker`, `ConflictOverride`
-- `ScheduleShare`, `PriorityRule`
-- `User`, `SchoolUser`, `Invite`
+**What exists:** PublicSchedulePage renders schedules. No print styles.
 
-### New Models (v1)
+**What to build:**
+- "Print" button on weekly board and season detail
+- CSS `@media print` that hides nav, sidebar, buttons
+- Clean table layout: day, time, type, facility, opponent/notes
+- Header with team name, school, week dates
+- Footer with generation timestamp and calendar feed URL
 
-#### Resource
-Tracks shared resources like buses, referees, and equipment.
-```
-Resource {
-  id, schoolId, name, type(BUS|REFEREE|EQUIPMENT|OTHER), metadata(JSON)
-}
-```
+**User Stories:**
+- US-8.1: As a coach, I can print this week's schedule as a clean one-pager for the locker room.
 
-#### EventResource
-Links resources to specific games/practices.
-```
-EventResource {
-  id, resourceId, eventType(GAME|PRACTICE), gameId?, practiceId?
-}
-```
-
-#### EventParticipant
-Tracks which users are assigned to specific events (enables multi-sport conflict detection).
-```
-EventParticipant {
-  id, userId, eventType(GAME|PRACTICE), gameId?, practiceId?
-  unique(userId, gameId), unique(userId, practiceId)
-}
-```
-
-#### Notification
-Tracks all sent notifications.
-```
-Notification {
-  id, schoolId, userId, channel(EMAIL|SMS), subject?, body,
-  eventType?, eventId?, status(PENDING|SENT|FAILED), sentAt?, failReason?
-}
-```
-
-#### NotificationPreference
-Per-user, per-school notification settings.
-```
-NotificationPreference {
-  id, userId, schoolId, emailEnabled, smsEnabled,
-  quietStart(HH:MM)?, quietEnd(HH:MM)?, digestEnabled
-}
-```
-
-#### CalendarFeed
-iCal subscription tokens.
-```
-CalendarFeed {
-  id, token(unique), userId, scope(TEAM|USER), teamId?, isActive
-}
-```
-
-### User Table Addition
-- `phone` field added for SMS notifications
+**Acceptance Criteria:**
+- [ ] "Print" button triggers `window.print()`
+- [ ] Print styles hide all chrome (nav, sidebar, buttons, modals)
+- [ ] Print layout fits on one page (landscape)
+- [ ] Shows team name, school, week range in header
 
 ---
 
-## 7. Conflict Engine (Technical Spec)
+## 6. Data Model Changes
 
-### Algorithm
-```
-checkAllConflicts(event) → SchedulingConflict[]
-  1. Facility overlap: query games + practices at same facility in time range
-  2. Person overlap: query EventParticipant for any participant in another event
-     overlapping by >5 minutes
-  3. Resource overlap: query EventResource for same resource in overlapping time
-  4. Blocker overlap: existing blocker check (school-wide, team, facility scope)
-```
+### Already Committed (schema + migration exist)
 
-### Smart Suggest Algorithm
-```
-suggestOpenSlots(event) → SlotSuggestion[]
-  1. Starting from preferred time, scan 30-min increments (7am-10pm, up to 7 days)
-  2. For each slot × each available facility:
-     a. Run checkAllConflicts
-     b. If no errors: score = hoursDiff + warningCount * 2
-  3. Return top 10 sorted by score (lower = better)
-```
+| Model | Purpose | Service Status |
+|-------|---------|----------------|
+| Resource | Buses, refs, equipment | CRUD service + routes done |
+| EventResource | Link resources → events | Part of resources service |
+| EventParticipant | Track athletes per event | Schema only, needs conflict wiring |
+| Notification | Audit trail of sent messages | Schema only, needs full service |
+| NotificationPreference | Per-user notification settings | Schema only, needs full service |
+| CalendarFeed | Personal iCal subscription tokens | Schema only, needs full service |
+| User.phone | SMS phone number | Column added |
 
-### Performance Target
-- Conflict check < 200ms for a school with 10 teams and 50 events/week
-- Smart suggest < 2s for 10 suggestions
+### New Schema Needed
+
+**Facility.rainFallbackId** — Optional FK to another facility, used by rain plan.
+```prisma
+model Facility {
+  ...
+  rainFallbackId String? @map("rain_fallback_id")
+  rainFallback   Facility? @relation("RainFallback", fields: [rainFallbackId], references: [id])
+  rainFallbackFor Facility[] @relation("RainFallback")
+}
+```
 
 ---
 
-## 8. Integrations
+## 7. Integrations
 
-| Priority | Integration | Mechanism |
-|----------|-------------|-----------|
-| P0 | Google/Apple/Outlook Calendar | iCal (.ics) feed URLs |
-| P0 | SMS (Twilio) | REST API, webhook for opt-out |
-| P0 | Email (Resend) | REST API (already integrated) |
-| P1 | Ref assignor CSV import | CSV upload, map columns to resources |
-| P1 | District bus requests | Email template generation |
+| Priority | Integration | Status | Mechanism |
+|----------|-------------|--------|-----------|
+| P0 | Google/Apple/Outlook Calendar | Partial (share-based iCal exists) | Extend with personal CalendarFeed URLs |
+| P0 | SMS (Twilio) | Config only | Build notification service |
+| P0 | Email (Resend) | Invite emails work | Extend to event notifications |
+| P1 | Ref assignor CSV import | CSV import exists for games | Extend to resource import |
+| P1 | District bus requests | Not started | Email template generation |
 
 ---
 
-## 9. Security & Privacy
+## 8. Security & Privacy
 
 - **FERPA compliance:** Roster data scoped to team; parent view limited to their athlete's teams.
-- **Permission enforcement:** All API routes check `SchoolUser.role` against permission matrix.
+- **Permission enforcement:** Apply `requireRole()` to all mutation routes (Section 5.7).
 - **Calendar feed tokens:** Unguessable cuid tokens, deactivatable without deletion.
-- **SMS opt-out:** STOP reply handling via Twilio webhook, stored in NotificationPreference.
+- **SMS opt-out:** STOP reply handling via Twilio webhook.
 - **Data minimization:** Phone numbers only stored if user opts into SMS.
 
 ---
 
-## 10. API Endpoints (New)
+## 9. UI Wireframes
 
-### Resources
-```
-GET    /api/v1/schools/:schoolId/resources          → List resources
-POST   /api/v1/schools/:schoolId/resources          → Create resource
-PATCH  /api/v1/resources/:id                        → Update resource
-DELETE /api/v1/resources/:id                        → Delete resource
-POST   /api/v1/resources/assign                     → Assign resource to event
-DELETE /api/v1/resources/:id/events/:type/:eventId  → Remove resource from event
-```
-
-### Conflict Engine
-```
-POST   /api/v1/schools/:schoolId/check-conflicts    → Full conflict check
-POST   /api/v1/schools/:schoolId/suggest-slots       → Smart slot suggestions
-```
-
-### Notifications
-```
-GET    /api/v1/schools/:schoolId/notifications       → List notifications (admin)
-GET    /api/v1/notifications/preferences              → Get user's preferences
-PUT    /api/v1/notifications/preferences              → Update preferences
-POST   /api/v1/schools/:schoolId/notifications/test  → Send test notification
-```
-
-### Calendar Feeds
-```
-POST   /api/v1/calendar-feeds                        → Create feed
-GET    /api/v1/calendar-feeds                         → List user's feeds
-DELETE /api/v1/calendar-feeds/:id                     → Deactivate feed
-GET    /cal/:token.ics                               → Public iCal feed (no auth)
-```
-
-### Quick Add & Bulk Ops
-```
-POST   /api/v1/schools/:schoolId/quick-add            → Parse natural language → event
-POST   /api/v1/schools/:schoolId/bulk-move             → Shift events by offset
-POST   /api/v1/schools/:schoolId/rain-plan             → Execute rain plan
-```
-
----
-
-## 11. UI Wireframes
-
-### 11.1 Weekly Board
+### 9.1 Weekly Board (upgrade from existing list view)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -421,13 +442,12 @@ Legend: ▓ = colored card    ⚠ = conflict badge
 Cards: Blue = Game, Green = Practice
 ```
 
-### 11.2 Conflict Banner (on event card)
+### 9.2 Conflict Detail (extends existing ConflictBadge)
 
 ```
 ┌────────────────────────────┐
 │ ▓ Varsity Practice         │
-│   Tue 3:30-5:00pm          │
-│   Gym A                    │
+│   Tue 3:30-5:00pm · Gym A  │
 │ ⚠ 2 conflicts              │
 │ ┌────────────────────────┐ │
 │ │ ❌ Facility: JV Prac    │ │
@@ -439,41 +459,17 @@ Cards: Blue = Game, Green = Practice
 └────────────────────────────┘
 ```
 
-### 11.3 Slot Suggestions Panel
+### 9.3 SMS Change Notice
 
 ```
-┌──────────────────────────────────┐
-│ Suggested Open Slots             │
-│                                  │
-│  1. Tue 5:00-6:30pm  Gym A  ✓   │
-│     0 conflicts                  │
-│                                  │
-│  2. Wed 3:30-5:00pm  Gym A      │
-│     0 conflicts                  │
-│                                  │
-│  3. Tue 3:30-5:00pm  Gym B      │
-│     1 warning (J. Smith)         │
-│                                  │
-│  [Move to Slot 1]  [Cancel]      │
-└──────────────────────────────────┘
+[AthleticOS] Varsity Soccer practice MOVED:
+Was: Tue 3:30pm Field A
+Now: Tue 5:00pm Gym A
+View: athleticos.app/s/abc
+Reply STOP to opt out
 ```
 
-### 11.4 SMS Change Notice
-
-```
-┌──────────────────────────────┐
-│ [AthleticOS] Varsity Soccer  │
-│ practice MOVED:              │
-│                              │
-│ ❌ Was: Tue 3:30pm Field A    │
-│ ✅ Now: Tue 5:00pm Gym A      │
-│                              │
-│ View: athleticos.app/s/abc   │
-│ Reply STOP to opt out        │
-└──────────────────────────────┘
-```
-
-### 11.5 Notification Preferences
+### 9.4 Notification Preferences
 
 ```
 ┌──────────────────────────────────┐
@@ -494,7 +490,7 @@ Cards: Blue = Game, Green = Practice
 └──────────────────────────────────┘
 ```
 
-### 11.6 Print Week View
+### 9.5 Print Week View
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -516,7 +512,24 @@ Cards: Blue = Game, Green = Practice
 
 ---
 
-## 12. Rollout Plan
+## 10. Implementation Priority
+
+| Priority | Feature | Effort | Depends On |
+|----------|---------|--------|------------|
+| P0 | 5.7 Role-based permissions | S | Nothing |
+| P0 | 5.2 Enhanced conflict detection | M | Resources CRUD (done) |
+| P0 | 5.3 Notifications | L | Nothing |
+| P1 | 5.1 Weekly board grid | L | Nothing |
+| P1 | 5.4 Personal calendar feeds | S | Existing iCal generation |
+| P1 | 5.5 Quick-add parsing | M | Weekly board |
+| P2 | 5.6 Bulk ops (shift + rain plan) | M | Notifications, Facility.rainFallbackId |
+| P2 | 5.8 Print-friendly view | S | Weekly board |
+
+**S** = 1-2 days, **M** = 3-5 days, **L** = 1-2 weeks
+
+---
+
+## 11. Rollout Plan
 
 | Phase | Duration | Scope | Goal |
 |-------|----------|-------|------|
@@ -531,7 +544,7 @@ Cards: Blue = Game, Green = Practice
 
 ---
 
-## 13. Success Metrics
+## 12. Success Metrics
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
@@ -544,37 +557,37 @@ Cards: Blue = Game, Green = Practice
 
 ---
 
-## 14. Technical Architecture
+## 13. Technical Notes
 
-### Existing Stack (no changes)
+### Stack (no changes)
 - **Backend:** Fastify + TypeScript, Prisma ORM, Zod validation, Vitest
-- **Frontend:** React 18 + Vite, Tailwind CSS, TanStack Query
+- **Frontend:** React 19 + Vite, Tailwind CSS, TanStack Query
 - **Database:** PostgreSQL 16
 - **Infrastructure:** Docker Compose (local), Render (prod)
 
 ### New Dependencies
-- **Twilio SDK** — SMS delivery
-- **ical-generator** — iCal feed generation (or hand-roll, it's simple)
+- **Twilio SDK** — SMS delivery (config vars already added)
+- No other new deps needed (iCal generation already exists in `public-routes.ts`)
 
 ### Architecture Notes
-- Conflict engine runs synchronously on create/update — must be fast (<200ms)
-- Notifications are fire-and-forget (write to `notifications` table with PENDING status, background worker picks up)
-- iCal feeds are generated on-demand (no caching needed for v1 scale)
-- Quick-add parsing is pure string matching (no AI/ML needed for v1)
+- Enhanced conflict engine runs synchronously on create/update — must stay < 200ms
+- Notifications: write PENDING to `notifications` table, background worker sends
+- iCal feeds: generated on-demand, reuse existing `generateICS()`
+- Quick-add parsing: pure regex/string matching, no AI needed
 
 ---
 
-## 15. Open Questions
+## 14. Open Questions
 
-1. **Ref assignor integration format:** Is there a standard CSV format, or school-specific?
-2. **District bus requests:** Email template vs. direct API integration?
-3. **Multi-school AD view:** Should ADs with multiple schools see a unified board?
-4. **Offline support:** How important is offline event creation for coaches at remote fields?
-5. **Weather API:** Integrate with a weather service for auto-blocking, or manual-only for v1?
+1. **Ref assignor integration format:** Standard CSV format, or school-specific?
+2. **District bus requests:** Email template vs. direct API?
+3. **Multi-school AD view:** Unified board across schools?
+4. **Offline support:** Offline event creation for coaches at remote fields?
+5. **Weather API:** Auto-blocking via weather service, or manual-only for v1?
 
 ---
 
-## 16. Out of Scope (v1)
+## 15. Out of Scope (v1)
 
 - AI-powered schedule optimization
 - Live score tracking
