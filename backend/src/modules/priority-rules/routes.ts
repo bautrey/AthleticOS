@@ -1,7 +1,7 @@
 // backend/src/modules/priority-rules/routes.ts
 
 import type { FastifyInstance } from 'fastify';
-import { authenticate, requireRole } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, MANAGEMENT, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { priorityRuleService } from './service.js';
 import {
   updatePriorityRulesSchema,
@@ -26,7 +26,7 @@ export async function priorityRuleRoutes(app: FastifyInstance) {
   app.get<{ Params: SchoolParams }>(
     '/schools/:schoolId/priority-rules',
     {
-      preHandler: [requireRole('ADMIN', 'ATHLETIC_DIRECTOR', 'COACH', 'PARENT', 'ATHLETE')],
+      preHandler: [requireRole(...ALL_INTERNAL)],
     },
     async (request) => {
       const rule = await priorityRuleService.get(request.params.schoolId);
@@ -34,11 +34,11 @@ export async function priorityRuleRoutes(app: FastifyInstance) {
     }
   );
 
-  // Update priority rules (ADMIN only)
+  // Update priority rules (MANAGEMENT only)
   app.put<{ Params: SchoolParams; Body: UpdatePriorityRulesInput }>(
     '/schools/:schoolId/priority-rules',
     {
-      preHandler: [requireRole('ADMIN')],
+      preHandler: [requireRole(...MANAGEMENT)],
     },
     async (request) => {
       const data = updatePriorityRulesSchema.parse(request.body);
@@ -56,7 +56,7 @@ export async function priorityRuleRoutes(app: FastifyInstance) {
   app.post<{ Params: SchoolParams; Body: CalculatePriorityInput }>(
     '/schools/:schoolId/priority-rules/calculate',
     {
-      preHandler: [requireRole('ADMIN', 'COACH')],
+      preHandler: [requireRole(...MANAGEMENT)],
     },
     async (request) => {
       const input = calculatePrioritySchema.parse(request.body);
@@ -69,7 +69,7 @@ export async function priorityRuleRoutes(app: FastifyInstance) {
   app.post<{ Params: SchoolParams; Body: ComparePriorityInput }>(
     '/schools/:schoolId/priority-rules/compare',
     {
-      preHandler: [requireRole('ADMIN', 'COACH')],
+      preHandler: [requireRole(...MANAGEMENT)],
     },
     async (request) => {
       const input = comparePrioritySchema.parse(request.body);
@@ -82,7 +82,7 @@ export async function priorityRuleRoutes(app: FastifyInstance) {
   app.get<{ Params: SchoolParams; Querystring: AuditQuery }>(
     '/schools/:schoolId/priority-rules/audits',
     {
-      preHandler: [requireRole('ADMIN')],
+      preHandler: [requireRole(...MANAGEMENT)],
     },
     async (request) => {
       const query = auditQuerySchema.parse(request.query);

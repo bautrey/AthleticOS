@@ -1,6 +1,6 @@
 // backend/src/modules/conflicts/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { prisma } from '../../common/db.js';
 import { createOverrideSchema, conflictsListQueryWithSuggestionsSchema, batchOverrideSchema } from './schemas.js';
 import { conflictService } from './service.js';
@@ -37,7 +37,9 @@ export async function conflictsRoutes(app: FastifyInstance) {
   });
 
   // List all conflicts for a school (paginated, for triage page)
-  app.get('/schools/:schoolId/conflicts', async (request) => {
+  app.get('/schools/:schoolId/conflicts', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { schoolId } = request.params as { schoolId: string };
     const query = conflictsListQueryWithSuggestionsSchema.parse(request.query);
     const result = await conflictService.listAllConflicts(schoolId, query);
@@ -45,14 +47,16 @@ export async function conflictsRoutes(app: FastifyInstance) {
   });
 
   // Get school-wide conflict summary (dashboard)
-  app.get('/schools/:schoolId/conflict-summary', async (request) => {
+  app.get('/schools/:schoolId/conflict-summary', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { schoolId } = request.params as { schoolId: string };
     const result = await conflictService.getSchoolConflictSummary(schoolId);
     return { data: result };
   });
 
   // Batch override multiple conflicts
-  app.post('/conflicts/batch-override', async (request, reply) => {
+  app.post('/conflicts/batch-override', async (request) => {
     const { userId } = request.user as { userId: string };
     const { overrides, reason } = batchOverrideSchema.parse(request.body);
 

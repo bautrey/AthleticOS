@@ -1,6 +1,6 @@
 // backend/src/modules/schools/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate, requireRole } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, MANAGEMENT } from '../../common/middleware/auth.js';
 import { createSchoolSchema, updateSchoolSchema } from './schemas.js';
 import { schoolsService } from './service.js';
 
@@ -33,7 +33,7 @@ export async function schoolsRoutes(app: FastifyInstance) {
 
   // Update school
   app.patch('/schools/:id', {
-    preHandler: [requireRole('ADMIN')],
+    preHandler: [requireRole(...MANAGEMENT)],
   }, async (request) => {
     const { userId } = request.user as { userId: string };
     const { id } = request.params as { id: string };
@@ -44,7 +44,7 @@ export async function schoolsRoutes(app: FastifyInstance) {
 
   // Delete school
   app.delete('/schools/:id', {
-    preHandler: [requireRole('ADMIN')],
+    preHandler: [requireRole(...MANAGEMENT)],
   }, async (request, reply) => {
     const { userId } = request.user as { userId: string };
     const { id } = request.params as { id: string };

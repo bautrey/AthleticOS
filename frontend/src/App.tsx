@@ -13,6 +13,7 @@ import { PublicSchedulePage } from './pages/PublicSchedulePage';
 import { PublicScheduleEmbed } from './pages/PublicScheduleEmbed';
 import { ConflictsPage } from './pages/ConflictsPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
+import { CalendarFeedsPage } from './pages/CalendarFeedsPage';
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ function AppRoutes() {
       <Route path="/schools/:schoolId/conflicts" element={<ProtectedRoute><ConflictsPage /></ProtectedRoute>} />
       <Route path="/schools/:schoolId/settings/priority-rules" element={<ProtectedRoute><PriorityRulesPage /></ProtectedRoute>} />
       <Route path="/schools/:schoolId/seasons/:seasonId" element={<ProtectedRoute><SeasonDetail /></ProtectedRoute>} />
+      <Route path="/calendar-feeds" element={<ProtectedRoute><CalendarFeedsPage /></ProtectedRoute>} />
     </Routes>
   );
 }

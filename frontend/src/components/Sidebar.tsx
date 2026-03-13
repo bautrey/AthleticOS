@@ -28,6 +28,15 @@ export function Sidebar() {
           Dashboard
         </NavLink>
 
+        <NavLink
+          to="/calendar-feeds"
+          className={({ isActive }) =>
+            `block px-4 py-2 rounded ${isActive ? 'bg-blue-600' : 'hover:bg-gray-800'}`
+          }
+        >
+          Calendar Feeds
+        </NavLink>
+
         {schools && schools.length > 0 && (
           <div className="mt-4">
             <div className="text-xs text-gray-500 uppercase px-4 mb-2">Schools</div>

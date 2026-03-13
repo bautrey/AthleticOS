@@ -1,6 +1,6 @@
 // backend/src/modules/practices/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, STAFF, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { createPracticeSchema, updatePracticeSchema } from './schemas.js';
 import { practicesService } from './service.js';
 import { conflictService } from '../conflicts/service.js';
@@ -9,14 +9,18 @@ export async function practicesRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   // List practices for season
-  app.get('/seasons/:seasonId/practices', async (request) => {
+  app.get('/seasons/:seasonId/practices', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { seasonId } = request.params as { seasonId: string };
     const practices = await practicesService.findBySeason(seasonId);
     return { data: practices };
   });
 
   // Create practice
-  app.post('/seasons/:seasonId/practices', async (request, reply) => {
+  app.post('/seasons/:seasonId/practices', {
+    preHandler: [requireRole(...STAFF)],
+  }, async (request, reply) => {
     const { seasonId } = request.params as { seasonId: string };
     const input = createPracticeSchema.parse(request.body);
     const practice = await practicesService.create(seasonId, input);

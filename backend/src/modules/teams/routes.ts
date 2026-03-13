@@ -1,6 +1,6 @@
 // backend/src/modules/teams/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate, requireRole } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, MANAGEMENT, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { createTeamSchema, updateTeamSchema } from './schemas.js';
 import { teamsService } from './service.js';
 
@@ -8,7 +8,9 @@ export async function teamsRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   // List teams for school
-  app.get('/schools/:schoolId/teams', async (request) => {
+  app.get('/schools/:schoolId/teams', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { schoolId } = request.params as { schoolId: string };
     const teams = await teamsService.findBySchool(schoolId);
     return { data: teams };
@@ -16,7 +18,7 @@ export async function teamsRoutes(app: FastifyInstance) {
 
   // Create team
   app.post('/schools/:schoolId/teams', {
-    preHandler: [requireRole('ADMIN', 'COACH')],
+    preHandler: [requireRole(...MANAGEMENT)],
   }, async (request, reply) => {
     const { schoolId } = request.params as { schoolId: string };
     const input = createTeamSchema.parse(request.body);

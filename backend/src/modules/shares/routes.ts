@@ -1,6 +1,6 @@
 // backend/src/modules/shares/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, STAFF, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { createShareSchema, updateShareSchema } from './schemas.js';
 import { sharesService } from './service.js';
 
@@ -8,14 +8,18 @@ export async function sharesRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   // List shares for a season
-  app.get('/seasons/:seasonId/shares', async (request) => {
+  app.get('/seasons/:seasonId/shares', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { seasonId } = request.params as { seasonId: string };
     const shares = await sharesService.listBySeason(seasonId);
     return { data: shares };
   });
 
   // Create a share
-  app.post('/seasons/:seasonId/shares', async (request, reply) => {
+  app.post('/seasons/:seasonId/shares', {
+    preHandler: [requireRole(...STAFF)],
+  }, async (request, reply) => {
     const { seasonId } = request.params as { seasonId: string };
     const input = createShareSchema.parse(request.body);
     const userId = (request.user as { userId: string }).userId;
@@ -24,14 +28,18 @@ export async function sharesRoutes(app: FastifyInstance) {
   });
 
   // Get a share by ID
-  app.get('/seasons/:seasonId/shares/:shareId', async (request) => {
+  app.get('/seasons/:seasonId/shares/:shareId', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { shareId } = request.params as { shareId: string };
     const share = await sharesService.findById(shareId);
     return { data: share };
   });
 
   // Update a share
-  app.patch('/seasons/:seasonId/shares/:shareId', async (request) => {
+  app.patch('/seasons/:seasonId/shares/:shareId', {
+    preHandler: [requireRole(...STAFF)],
+  }, async (request) => {
     const { shareId } = request.params as { shareId: string };
     const input = updateShareSchema.parse(request.body);
     const share = await sharesService.update(shareId, input);
@@ -39,7 +47,9 @@ export async function sharesRoutes(app: FastifyInstance) {
   });
 
   // Delete a share
-  app.delete('/seasons/:seasonId/shares/:shareId', async (request, reply) => {
+  app.delete('/seasons/:seasonId/shares/:shareId', {
+    preHandler: [requireRole(...STAFF)],
+  }, async (request, reply) => {
     const { shareId } = request.params as { shareId: string };
     await sharesService.delete(shareId);
     return reply.status(204).send();

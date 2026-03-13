@@ -1,13 +1,13 @@
 // backend/src/modules/invites/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate, requireRole } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, MANAGEMENT } from '../../common/middleware/auth.js';
 import { createInviteSchema } from './schemas.js';
 import { inviteService } from './service.js';
 
 export async function inviteRoutes(app: FastifyInstance) {
-  // Create invite (admin only)
+  // Create invite (management only)
   app.post('/schools/:schoolId/invites', {
-    preHandler: [authenticate, requireRole('ADMIN')],
+    preHandler: [authenticate, requireRole(...MANAGEMENT)],
   }, async (request, reply) => {
     const { schoolId } = request.params as { schoolId: string };
     const { userId } = request.user as { userId: string };
@@ -17,18 +17,18 @@ export async function inviteRoutes(app: FastifyInstance) {
     return reply.status(201).send({ data: invite });
   });
 
-  // List invites (admin only)
+  // List invites (management only)
   app.get('/schools/:schoolId/invites', {
-    preHandler: [authenticate, requireRole('ADMIN')],
+    preHandler: [authenticate, requireRole(...MANAGEMENT)],
   }, async (request) => {
     const { schoolId } = request.params as { schoolId: string };
     const invites = await inviteService.listInvites(schoolId);
     return { data: invites };
   });
 
-  // Revoke invite (admin only)
+  // Revoke invite (management only)
   app.delete('/schools/:schoolId/invites/:inviteId', {
-    preHandler: [authenticate, requireRole('ADMIN')],
+    preHandler: [authenticate, requireRole(...MANAGEMENT)],
   }, async (request, reply) => {
     const { schoolId, inviteId } = request.params as { schoolId: string; inviteId: string };
     await inviteService.revokeInvite(inviteId, schoolId);

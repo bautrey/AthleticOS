@@ -1,6 +1,6 @@
 // backend/src/modules/events/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { eventsService } from './service.js';
 import { upcomingEventsSchema } from './schemas.js';
 
@@ -8,7 +8,9 @@ export async function eventsRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   // Get upcoming events for a school
-  app.get('/schools/:schoolId/events/upcoming', async (request) => {
+  app.get('/schools/:schoolId/events/upcoming', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { schoolId } = request.params as { schoolId: string };
     const { from, to } = upcomingEventsSchema.parse(request.query);
 

@@ -1,6 +1,6 @@
 // backend/src/modules/blockers/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate, requireRole } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, STAFF, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { blockerService } from './service.js';
 import {
   createBlockerSchema,
@@ -27,7 +27,7 @@ export async function blockersRoutes(app: FastifyInstance) {
   app.get<{ Params: SchoolParams; Querystring: BlockerQuery }>(
     '/schools/:schoolId/blockers',
     {
-      preHandler: [requireRole('ADMIN', 'ATHLETIC_DIRECTOR', 'COACH', 'PARENT', 'ATHLETE')],
+      preHandler: [requireRole(...ALL_INTERNAL)],
     },
     async (request) => {
       const query = blockerQuerySchema.parse(request.query);
@@ -40,7 +40,7 @@ export async function blockersRoutes(app: FastifyInstance) {
   app.get<{ Params: BlockerParams }>(
     '/schools/:schoolId/blockers/:id',
     {
-      preHandler: [requireRole('ADMIN', 'ATHLETIC_DIRECTOR', 'COACH', 'PARENT', 'ATHLETE')],
+      preHandler: [requireRole(...ALL_INTERNAL)],
     },
     async (request) => {
       const blocker = await blockerService.getById(
@@ -55,7 +55,7 @@ export async function blockersRoutes(app: FastifyInstance) {
   app.post<{ Params: SchoolParams; Body: CreateBlockerInput }>(
     '/schools/:schoolId/blockers',
     {
-      preHandler: [requireRole('ADMIN', 'COACH')],
+      preHandler: [requireRole(...STAFF)],
     },
     async (request, reply) => {
       const data = createBlockerSchema.parse(request.body);
@@ -76,7 +76,7 @@ export async function blockersRoutes(app: FastifyInstance) {
   app.patch<{ Params: BlockerParams; Body: UpdateBlockerInput }>(
     '/schools/:schoolId/blockers/:id',
     {
-      preHandler: [requireRole('ADMIN', 'COACH')],
+      preHandler: [requireRole(...STAFF)],
     },
     async (request) => {
       const data = updateBlockerSchema.parse(request.body);
@@ -96,7 +96,7 @@ export async function blockersRoutes(app: FastifyInstance) {
   app.delete<{ Params: BlockerParams }>(
     '/schools/:schoolId/blockers/:id',
     {
-      preHandler: [requireRole('ADMIN', 'COACH')],
+      preHandler: [requireRole(...STAFF)],
     },
     async (request, reply) => {
       await blockerService.delete(request.params.schoolId, request.params.id);

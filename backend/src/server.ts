@@ -21,6 +21,7 @@ import { publicScheduleRoutes } from './modules/shares/public-routes.js';
 import { eventsRoutes } from './modules/events/routes.js';
 import { ideasRoutes } from './modules/ideas/routes.js';
 import { inviteRoutes } from './modules/invites/routes.js';
+import { calendarFeedsRoutes, publicCalendarFeedRoutes } from './modules/calendar-feeds/routes.js';
 import { AppError } from './common/errors.js';
 import { ZodError } from 'zod';
 
@@ -35,7 +36,7 @@ const app = Fastify({
 });
 
 // Error handler
-app.setErrorHandler((error, request, reply) => {
+app.setErrorHandler((error, _request, reply) => {
   if (error instanceof AppError) {
     return reply.status(error.statusCode).send({
       error: { code: error.code, message: error.message, details: error.details }
@@ -65,6 +66,7 @@ app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOStrin
 
 // Public routes (no auth required, rate limited)
 await app.register(publicScheduleRoutes, { prefix: '/api/v1' });
+await app.register(publicCalendarFeedRoutes);
 
 // API routes (auth required)
 await app.register(async (api) => {
@@ -83,6 +85,7 @@ await app.register(async (api) => {
   await api.register(eventsRoutes);
   await api.register(ideasRoutes);
   await api.register(inviteRoutes);
+  await api.register(calendarFeedsRoutes);
 }, { prefix: '/api/v1' });
 
 // Start

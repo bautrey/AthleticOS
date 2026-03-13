@@ -1,6 +1,6 @@
 // backend/src/modules/games/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, STAFF, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { createGameSchema, updateGameSchema } from './schemas.js';
 import { gamesService } from './service.js';
 import { conflictService } from '../conflicts/service.js';
@@ -9,14 +9,18 @@ export async function gamesRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   // List games for season
-  app.get('/seasons/:seasonId/games', async (request) => {
+  app.get('/seasons/:seasonId/games', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { seasonId } = request.params as { seasonId: string };
     const games = await gamesService.findBySeason(seasonId);
     return { data: games };
   });
 
   // Create game
-  app.post('/seasons/:seasonId/games', async (request, reply) => {
+  app.post('/seasons/:seasonId/games', {
+    preHandler: [requireRole(...STAFF)],
+  }, async (request, reply) => {
     const { seasonId } = request.params as { seasonId: string };
     const input = createGameSchema.parse(request.body);
     const game = await gamesService.create(seasonId, input);

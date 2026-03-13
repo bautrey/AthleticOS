@@ -14,12 +14,19 @@ model User {
   id           String       @id @default(cuid())
   email        String       @unique
   name         String?
+  phone        String?
   passwordHash String       @map("password_hash")
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
-  schoolUsers  SchoolUser[]
-  invitesSent  Invite[]     @relation("inviter")
+  schoolUsers                SchoolUser[]
+  invitesSent                Invite[]     @relation("inviter")
+  calendarFeeds              CalendarFeed[]
+  notifications              Notification[]
+  notificationPreferences    NotificationPreference[]
+  facilityRequestsSubmitted  FacilityRequest[] @relation("FacilityRequestRequester")
+  facilityRequestsReviewed   FacilityRequest[] @relation("FacilityRequestReviewer")
+  checklistItems             ChecklistItem[]
 
   @@map("users")
 }
@@ -44,6 +51,7 @@ enum Role {
   COACH
   PARENT
   ATHLETE
+  COMMUNITY
 }
 
 model Invite {
@@ -73,13 +81,18 @@ model School {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  schoolUsers       SchoolUser[]
-  invites           Invite[]
-  teams             Team[]
-  facilities        Facility[]
-  blockers          Blocker[]
-  conflictOverrides ConflictOverride[]
-  priorityRule      PriorityRule?
+  schoolUsers            SchoolUser[]
+  invites                Invite[]
+  teams                  Team[]
+  facilities             Facility[]
+  blockers               Blocker[]
+  conflictOverrides      ConflictOverride[]
+  priorityRule           PriorityRule?
+  notifications          Notification[]
+  notificationPreferences NotificationPreference[]
+  facilityRequests       FacilityRequest[]
+  operationsTemplates    OperationsTemplate[]
+  eventChecklists        EventChecklist[]
 
   @@map("schools")
 }
@@ -93,9 +106,10 @@ model Team {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  seasons   Season[]
-  blockers  Blocker[]
+  school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  seasons       Season[]
+  blockers      Blocker[]
+  calendarFeeds CalendarFeed[]
 
   @@index([schoolId])
   @@map("teams")
@@ -127,19 +141,23 @@ model Season {
 }
 
 model Facility {
-  id        String       @id @default(cuid())
-  schoolId  String       @map("school_id")
-  name      String
-  type      FacilityType @default(GYM)
-  capacity  Int?
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
+  id             String       @id @default(cuid())
+  schoolId       String       @map("school_id")
+  name           String
+  type           FacilityType @default(GYM)
+  capacity       Int?
+  rainFallbackId String?      @map("rain_fallback_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  school    School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  timeSlots TimeSlot[]
-  games     Game[]
-  practices Practice[]
-  blockers  Blocker[]
+  school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  rainFallback     Facility?         @relation("FacilityRainFallback", fields: [rainFallbackId], references: [id])
+  fallbackFor      Facility[]        @relation("FacilityRainFallback")
+  timeSlots        TimeSlot[]
+  games            Game[]
+  practices        Practice[]
+  blockers         Blocker[]
+  facilityRequests FacilityRequest[]
 
   @@index([schoolId])
   @@map("facilities")
@@ -185,16 +203,17 @@ model TimeSlot {
 }
 
 model Game {
-  id         String     @id @default(cuid())
-  seasonId   String     @map("season_id")
-  facilityId String?    @map("facility_id")
-  opponent   String
-  datetime   DateTime
-  homeAway   HomeAway   @default(HOME) @map("home_away")
-  status     GameStatus @default(SCHEDULED)
-  notes      String?
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime   @updatedAt @map("updated_at")
+  id                String     @id @default(cuid())
+  seasonId          String     @map("season_id")
+  facilityId        String?    @map("facility_id")
+  opponent          String
+  datetime          DateTime
+  homeAway          HomeAway   @default(HOME) @map("home_away")
+  status            GameStatus @default(SCHEDULED)
+  notes             String?
+  recurrenceGroupId String?    @map("recurrence_group_id")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
 
   season     Season     @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   facility   Facility?  @relation(fields: [facilityId], references: [id], onDelete: SetNull)
@@ -219,14 +238,15 @@ enum GameStatus {
 }
 
 model Practice {
-  id              String    @id @default(cuid())
-  seasonId        String    @map("season_id")
-  facilityId      String?   @map("facility_id")
-  datetime        DateTime
-  durationMinutes Int       @default(90) @map("duration_minutes")
-  notes           String?
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id                String    @id @default(cuid())
+  seasonId          String    @map("season_id")
+  facilityId        String?   @map("facility_id")
+  datetime          DateTime
+  durationMinutes   Int       @default(90) @map("duration_minutes")
+  notes             String?
+  recurrenceGroupId String?   @map("recurrence_group_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   season          Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   facility        Facility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
@@ -374,4 +394,196 @@ model PriorityRuleAudit {
 
   @@index([priorityRuleId])
   @@map("priority_rule_audits")
+}
+
+// ============ Calendar Feeds (Sprint 3) ============
+
+enum CalendarFeedType {
+  TEAM
+  USER
+}
+
+model CalendarFeed {
+  id           String           @id @default(cuid())
+  userId       String           @map("user_id")
+  type         CalendarFeedType
+  teamId       String?          @map("team_id")
+  token        String           @unique @default(cuid())
+  isActive     Boolean          @default(true) @map("is_active")
+  lastAccessed DateTime?        @map("last_accessed")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id])
+
+  @@map("calendar_feeds")
+}
+
+// ============ Notifications (Sprint 3 - Schema Only) ============
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  IN_APP
+  PUSH
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+  DELIVERED
+}
+
+enum NotificationTrigger {
+  CONFLICT_DETECTED
+  CONFLICT_RESOLVED
+  SCHEDULE_CHANGE
+  GAME_REMINDER
+  PRACTICE_REMINDER
+  FACILITY_REQUEST
+  CHECKLIST_ASSIGNED
+  WEATHER_ALERT
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  schoolId    String              @map("school_id")
+  userId      String              @map("user_id")
+  channel     NotificationChannel
+  trigger     NotificationTrigger
+  status      NotificationStatus  @default(QUEUED)
+  subject     String
+  body        String
+  metadata    Json?
+  sentAt      DateTime?           @map("sent_at")
+  failedAt    DateTime?           @map("failed_at")
+  failReason  String?             @map("fail_reason")
+  retryCount  Int                 @default(0) @map("retry_count")
+  createdAt   DateTime            @default(now()) @map("created_at")
+
+  school School @relation(fields: [schoolId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@index([schoolId, trigger])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id            String              @id @default(cuid())
+  userId        String              @map("user_id")
+  schoolId      String              @map("school_id")
+  channel       NotificationChannel
+  trigger       NotificationTrigger
+  enabled       Boolean             @default(true)
+  quietStart    String?             @map("quiet_start")   // "22:00"
+  quietEnd      String?             @map("quiet_end")     // "07:00"
+  digestEnabled Boolean             @default(false) @map("digest_enabled")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id])
+  school School @relation(fields: [schoolId], references: [id])
+
+  @@unique([userId, schoolId, channel, trigger])
+  @@map("notification_preferences")
+}
+
+// ============ Facility Requests (Sprint 3 - Schema Only) ============
+
+enum RequestType {
+  BOOKING
+  MAINTENANCE
+  SETUP
+  TEARDOWN
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  CANCELLED
+}
+
+model FacilityRequest {
+  id           String        @id @default(cuid())
+  schoolId     String        @map("school_id")
+  facilityId   String        @map("facility_id")
+  requesterId  String        @map("requester_id")
+  type         RequestType
+  status       RequestStatus @default(PENDING)
+  title        String
+  description  String?
+  requestedDate DateTime     @map("requested_date")
+  startTime    String        @map("start_time")
+  endTime      String        @map("end_time")
+  reviewedBy   String?       @map("reviewed_by")
+  reviewedAt   DateTime?     @map("reviewed_at")
+  reviewNotes  String?       @map("review_notes")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  school    School   @relation(fields: [schoolId], references: [id])
+  facility  Facility @relation(fields: [facilityId], references: [id])
+  requester User     @relation("FacilityRequestRequester", fields: [requesterId], references: [id])
+  reviewer  User?    @relation("FacilityRequestReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([schoolId, status])
+  @@map("facility_requests")
+}
+
+// ============ Operations & Checklists (Sprint 3 - Schema Only) ============
+
+enum ChecklistItemStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+model OperationsTemplate {
+  id        String   @id @default(cuid())
+  schoolId  String   @map("school_id")
+  name      String
+  items     Json     // array of { title, description, assigneeRole? }
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  school     School          @relation(fields: [schoolId], references: [id])
+  checklists EventChecklist[]
+
+  @@map("operations_templates")
+}
+
+model EventChecklist {
+  id         String   @id @default(cuid())
+  schoolId   String   @map("school_id")
+  eventType  String   @map("event_type")   // "GAME" or "PRACTICE"
+  eventId    String   @map("event_id")
+  templateId String?  @map("template_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  school   School              @relation(fields: [schoolId], references: [id])
+  template OperationsTemplate? @relation(fields: [templateId], references: [id])
+  items    ChecklistItem[]
+
+  @@unique([eventType, eventId])
+  @@map("event_checklists")
+}
+
+model ChecklistItem {
+  id          String              @id @default(cuid())
+  checklistId String              @map("checklist_id")
+  title       String
+  description String?
+  status      ChecklistItemStatus @default(NOT_STARTED)
+  assigneeId  String?             @map("assignee_id")
+  completedAt DateTime?           @map("completed_at")
+  sortOrder   Int                 @default(0) @map("sort_order")
+
+  checklist EventChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  assignee  User?          @relation(fields: [assigneeId], references: [id])
+
+  @@map("checklist_items")
 }

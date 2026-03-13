@@ -1,6 +1,6 @@
 // backend/src/modules/facilities/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate, requireRole } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, MANAGEMENT, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { createFacilitySchema, updateFacilitySchema } from './schemas.js';
 import { facilitiesService } from './service.js';
 
@@ -8,7 +8,9 @@ export async function facilitiesRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   // List facilities for school
-  app.get('/schools/:schoolId/facilities', async (request) => {
+  app.get('/schools/:schoolId/facilities', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { schoolId } = request.params as { schoolId: string };
     const facilities = await facilitiesService.findBySchool(schoolId);
     return { data: facilities };
@@ -16,7 +18,7 @@ export async function facilitiesRoutes(app: FastifyInstance) {
 
   // Create facility
   app.post('/schools/:schoolId/facilities', {
-    preHandler: [requireRole('ADMIN')],
+    preHandler: [requireRole(...MANAGEMENT)],
   }, async (request, reply) => {
     const { schoolId } = request.params as { schoolId: string };
     const input = createFacilitySchema.parse(request.body);

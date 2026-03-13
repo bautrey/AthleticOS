@@ -1,6 +1,6 @@
 // backend/src/modules/seasons/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate } from '../../common/middleware/auth.js';
+import { authenticate, requireRole, STAFF, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { createSeasonSchema, createSeasonForSchoolSchema, updateSeasonSchema } from './schemas.js';
 import { seasonsService } from './service.js';
 
@@ -8,14 +8,18 @@ export async function seasonsRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   // List seasons for school (aggregated across all teams)
-  app.get('/schools/:schoolId/seasons', async (request) => {
+  app.get('/schools/:schoolId/seasons', {
+    preHandler: [requireRole(...ALL_INTERNAL)],
+  }, async (request) => {
     const { schoolId } = request.params as { schoolId: string };
     const seasons = await seasonsService.findBySchool(schoolId);
     return { data: seasons };
   });
 
   // Create season for team (school-level endpoint)
-  app.post('/schools/:schoolId/seasons', async (request, reply) => {
+  app.post('/schools/:schoolId/seasons', {
+    preHandler: [requireRole(...STAFF)],
+  }, async (request, reply) => {
     const { teamId, ...input } = createSeasonForSchoolSchema.parse(request.body);
     const season = await seasonsService.create(teamId, input);
     return reply.status(201).send({ data: season });
