@@ -13,6 +13,9 @@ const envSchema = z.object({
   IDEAS_API_KEY: z.string().default(''),
   RESEND_API_KEY: z.string().default(''),
   APP_URL: z.string().default('http://localhost:3005'),
+  TWILIO_ACCOUNT_SID: z.string().default(''),
+  TWILIO_AUTH_TOKEN: z.string().default(''),
+  TWILIO_PHONE_NUMBER: z.string().default(''),
 });
 
 export const config = envSchema.parse(process.env);
