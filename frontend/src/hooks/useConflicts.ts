@@ -8,6 +8,7 @@ import {
   type BatchOverrideInput,
   type CheckConflictsInput,
   type SuggestSlotsInput,
+  type ApplySlotInput,
 } from '../api/conflicts';
 
 // List all conflicts for a school (paginated)
@@ -113,5 +114,17 @@ export function useCheckConflicts(schoolId: string) {
 export function useSuggestSlots(schoolId: string) {
   return useMutation({
     mutationFn: (input: SuggestSlotsInput) => conflictsApi.suggestSlots(schoolId, input),
+  });
+}
+
+// Apply a suggested slot to reschedule an event
+export function useApplySlot(schoolId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ApplySlotInput) => conflictsApi.applySlot(schoolId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conflicts'] });
+    },
   });
 }

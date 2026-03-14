@@ -170,6 +170,26 @@ export interface CheckConflictsResponse {
   };
 }
 
+export interface ApplySlotInput {
+  eventType: EventType;
+  eventId: string;
+  newDatetime: string;
+}
+
+export interface ApplySlotResponse {
+  event: {
+    id: string;
+    type: string;
+    datetime: string;
+    opponent?: string;
+    facilityName: string | null;
+  };
+  conflicts: {
+    hasConflicts: boolean;
+    conflicts: Conflict[];
+  };
+}
+
 export interface SuggestSlotsInput {
   facilityId: string;
   date: string;
@@ -263,5 +283,11 @@ export const conflictsApi = {
   suggestSlots: async (schoolId: string, input: SuggestSlotsInput): Promise<ScoredSlot[]> => {
     const { data } = await api.post(`/schools/${schoolId}/suggest-slots`, input);
     return data.data.slots;
+  },
+
+  // Apply a suggested slot to reschedule an event
+  applySlot: async (schoolId: string, input: ApplySlotInput): Promise<ApplySlotResponse> => {
+    const { data } = await api.post(`/schools/${schoolId}/conflicts/apply-slot`, input);
+    return data.data;
   },
 };

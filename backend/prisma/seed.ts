@@ -68,10 +68,10 @@ async function main() {
     prisma.team.create({ data: { schoolId: school.id, name: 'Varsity Soccer (Girls)', sport: 'Soccer', level: 'VARSITY' } }),
   ]);
 
-  const [vFootball, jvFootball, vBBoys, vBGirls, jvBBoys, vBaseball, vVolleyball, vSwimming, vTrack, vTennis, vSoccerB, vSoccerG] = teams;
+  const [_vFootball, _jvFootball, vBBoys, vBGirls, jvBBoys, vBaseball, _vVolleyball, vSwimming, vTrack, vTennis, vSoccerB, _vSoccerG] = teams;
 
   // Create seasons (Spring 2026 for spring sports, Fall 2025 already happened)
-  const now = new Date('2026-02-27');
+  const _now = new Date('2026-02-27');
 
   // Basketball season (current - wrapping up)
   const bbSeason = await prisma.season.create({
@@ -311,6 +311,183 @@ async function main() {
       createdBy: user.id,
     },
   });
+
+  // === EXPLICIT FACILITY DOUBLE-BOOKINGS ===
+
+  // Double-booking 1: Baseball practice AND Soccer practice at Baseball Complex, same time
+  const doubleBook1Date = new Date('2026-03-06T16:00:00');
+  await prisma.practice.create({
+    data: {
+      seasonId: baseballSeason.id,
+      facilityId: baseballField.id,
+      datetime: doubleBook1Date,
+      durationMinutes: 120,
+      notes: 'Extended practice - scrimmage',
+    },
+  });
+  await prisma.practice.create({
+    data: {
+      seasonId: soccerBSeason.id,
+      facilityId: baseballField.id,
+      datetime: doubleBook1Date,
+      durationMinutes: 90,
+      notes: 'Field training overflow from Chaparral',
+    },
+  });
+
+  // Double-booking 2: Boys Basketball practice AND Girls Basketball practice at Main Gym, same time
+  const doubleBook2Date = new Date('2026-03-07T15:30:00');
+  await prisma.practice.create({
+    data: {
+      seasonId: bbSeason.id,
+      facilityId: mainGym.id,
+      datetime: doubleBook2Date,
+      durationMinutes: 90,
+    },
+  });
+  await prisma.practice.create({
+    data: {
+      seasonId: bbGirlsSeason.id,
+      facilityId: mainGym.id,
+      datetime: doubleBook2Date,
+      durationMinutes: 90,
+    },
+  });
+
+  // Double-booking 3: Track practice AND Soccer game at Chaparral Stadium, same time
+  const doubleBook3Date = new Date('2026-03-10T16:00:00');
+  await prisma.practice.create({
+    data: {
+      seasonId: trackSeason.id,
+      facilityId: footballField.id,
+      datetime: doubleBook3Date,
+      durationMinutes: 90,
+      notes: 'Sprint drills on main field',
+    },
+  });
+  await prisma.game.create({
+    data: {
+      seasonId: soccerBSeason.id,
+      facilityId: footballField.id,
+      opponent: 'Ursuline Academy',
+      datetime: doubleBook3Date,
+      homeAway: 'HOME',
+      status: 'SCHEDULED',
+    },
+  });
+
+  // === GAME CONFLICTING WITH WEATHER BLOCKER ===
+  // Weather blocker is Feb 25-26, but that's in the past. Add a new weather blocker for demo.
+  const _weatherBlocker = await prisma.blocker.create({
+    data: {
+      schoolId: school.id,
+      type: 'WEATHER',
+      name: 'Tornado Watch',
+      description: 'Tornado watch issued - all outdoor activities suspended',
+      scope: 'SCHOOL_WIDE',
+      startDatetime: new Date('2026-03-06T12:00:00Z'),
+      endDatetime: new Date('2026-03-06T23:59:00Z'),
+      createdBy: user.id,
+    },
+  });
+  // Baseball game during tornado watch (outdoor sport = rain plan demo)
+  await prisma.game.create({
+    data: {
+      seasonId: baseballSeason.id,
+      facilityId: baseballField.id,
+      opponent: 'Fort Worth Country Day',
+      datetime: new Date('2026-03-06T17:00:00'),
+      homeAway: 'HOME',
+      status: 'SCHEDULED',
+      notes: 'Needs rain plan',
+    },
+  });
+
+  // === VARSITY GAME CONFLICTING WITH EXAM PERIOD (high-confidence override suggestion) ===
+  // Midterm exams are March 9-13. Add a varsity basketball playoff game during that time.
+  await prisma.game.create({
+    data: {
+      seasonId: bbSeason.id,
+      facilityId: mainGym.id,
+      opponent: 'Bishop Lynch (Playoff)',
+      datetime: new Date('2026-03-10T19:00:00'),
+      homeAway: 'HOME',
+      status: 'SCHEDULED',
+      notes: 'District playoff game - exam week conflict',
+    },
+  });
+
+  // === MAINTENANCE BLOCKER ON BASEBALL FIELD ===
+  await prisma.blocker.create({
+    data: {
+      schoolId: school.id,
+      type: 'MAINTENANCE',
+      name: 'Baseball Infield Resurfacing',
+      description: 'Infield clay resurfacing and mound repair',
+      scope: 'FACILITY',
+      facilityId: baseballField.id,
+      startDatetime: new Date('2026-03-14T00:00:00Z'),
+      endDatetime: new Date('2026-03-15T23:59:00Z'),
+      createdBy: user.id,
+    },
+  });
+
+  // === RESOLVED OVERRIDE (for override history demo) ===
+  // Find the first basketball game that conflicts with gym maintenance (March 2-4)
+  const bbGameDuringMaintenance = await prisma.game.findFirst({
+    where: {
+      seasonId: bbSeason.id,
+      facilityId: mainGym.id,
+      datetime: {
+        gte: new Date('2026-03-02'),
+        lt: new Date('2026-03-05'),
+      },
+    },
+  });
+  // Also override the Standardized Testing blocker (March 5) for a practice
+  const bbPracticeDuringTesting = await prisma.practice.findFirst({
+    where: {
+      seasonId: bbSeason.id,
+      facilityId: mainGym.id,
+      datetime: {
+        gte: new Date('2026-03-05'),
+        lt: new Date('2026-03-06'),
+      },
+    },
+  });
+
+  // Get blocker IDs
+  const gymMaintenanceBlocker = await prisma.blocker.findFirst({
+    where: { schoolId: school.id, name: 'Gym Floor Refinishing' },
+  });
+  const standardizedTestingBlocker = await prisma.blocker.findFirst({
+    where: { schoolId: school.id, name: 'Standardized Testing' },
+  });
+
+  if (bbGameDuringMaintenance && gymMaintenanceBlocker) {
+    await prisma.conflictOverride.create({
+      data: {
+        schoolId: school.id,
+        eventType: 'GAME',
+        eventId: bbGameDuringMaintenance.id,
+        blockerId: gymMaintenanceBlocker.id,
+        overriddenBy: user.id,
+        reason: 'Playoff implications - gym refinishing rescheduled to start March 5',
+      },
+    });
+  }
+  if (bbPracticeDuringTesting && standardizedTestingBlocker) {
+    await prisma.conflictOverride.create({
+      data: {
+        schoolId: school.id,
+        eventType: 'PRACTICE',
+        eventId: bbPracticeDuringTesting.id,
+        blockerId: standardizedTestingBlocker.id,
+        overriddenBy: user.id,
+        reason: 'Shortened practice approved by AD - post-testing hours only',
+      },
+    });
+  }
 
   // Time slots for facilities
   const weekdays = [1, 2, 3, 4, 5];

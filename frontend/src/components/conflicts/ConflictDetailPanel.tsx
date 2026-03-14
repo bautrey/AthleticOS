@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Conflict, ScoredSlot } from '../../api/conflicts';
-import { useCreateConflictOverride, useEventOverrides, useSuggestSlots } from '../../hooks/useConflicts';
+import { useCreateConflictOverride, useEventOverrides, useSuggestSlots, useApplySlot } from '../../hooks/useConflicts';
 
 interface ConflictDetailPanelProps {
   isOpen: boolean;
@@ -93,8 +93,11 @@ export function ConflictDetailPanel({
   const [overrideReason, setOverrideReason] = useState('');
   const [showOverrideSuccess, setShowOverrideSuccess] = useState(false);
   const [suggestedSlots, setSuggestedSlots] = useState<ScoredSlot[] | null>(null);
+  const [applySlotSuccess, setApplySlotSuccess] = useState<string | null>(null);
+  const [applySlotError, setApplySlotError] = useState<string | null>(null);
   const overrideMutation = useCreateConflictOverride();
   const suggestSlotsMutation = useSuggestSlots(schoolId ?? '');
+  const applySlotMutation = useApplySlot(schoolId ?? '');
   const eventType = event.type === 'game' ? 'GAME' as const : 'PRACTICE' as const;
   const { data: overrides } = useEventOverrides(isOpen ? eventType : null, isOpen ? event.id : null);
 
@@ -320,6 +323,16 @@ export function ConflictDetailPanel({
                 </button>
               ) : (
                 <div className="space-y-2">
+                  {applySlotSuccess && (
+                    <div className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg p-3">
+                      {applySlotSuccess}
+                    </div>
+                  )}
+                  {applySlotError && (
+                    <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                      {applySlotError}
+                    </div>
+                  )}
                   {suggestedSlots.map((slot, i) => (
                     <div
                       key={i}
@@ -333,13 +346,46 @@ export function ConflictDetailPanel({
                         <span className="font-medium">
                           {slot.startTime} - {slot.endTime}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          slot.score >= 80 ? 'bg-green-100 text-green-700' :
-                          slot.score >= 50 ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          Score: {slot.score}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            slot.score >= 80 ? 'bg-green-100 text-green-700' :
+                            slot.score >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            Score: {slot.score}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setApplySlotSuccess(null);
+                              setApplySlotError(null);
+                              // Build ISO datetime from slot date + startTime
+                              const [hours, minutes] = slot.startTime.split(':').map(Number);
+                              const newDate = new Date(slot.date);
+                              newDate.setHours(hours, minutes, 0, 0);
+                              applySlotMutation.mutate(
+                                {
+                                  eventType,
+                                  eventId: event.id,
+                                  newDatetime: newDate.toISOString(),
+                                },
+                                {
+                                  onSuccess: () => {
+                                    setApplySlotSuccess(`Rescheduled to ${slot.startTime}`);
+                                    setSuggestedSlots(null);
+                                    setTimeout(() => setApplySlotSuccess(null), 5000);
+                                  },
+                                  onError: (err) => {
+                                    setApplySlotError(err instanceof Error ? err.message : 'Failed to apply slot');
+                                  },
+                                }
+                              );
+                            }}
+                            disabled={applySlotMutation.isPending}
+                            className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
+                          >
+                            {applySlotMutation.isPending ? '...' : 'Apply'}
+                          </button>
+                        </div>
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         {slot.reasons.join(' | ')}

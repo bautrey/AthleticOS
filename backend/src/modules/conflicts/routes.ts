@@ -2,7 +2,7 @@
 import type { FastifyInstance } from 'fastify';
 import { authenticate, requireRole, STAFF, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { prisma } from '../../common/db.js';
-import { createOverrideSchema, conflictsListQueryWithSuggestionsSchema, batchOverrideSchema, checkConflictsSchema, suggestSlotsSchema } from './schemas.js';
+import { createOverrideSchema, conflictsListQueryWithSuggestionsSchema, batchOverrideSchema, checkConflictsSchema, suggestSlotsSchema, applySlotSchema } from './schemas.js';
 import { conflictService } from './service.js';
 
 export async function conflictsRoutes(app: FastifyInstance) {
@@ -111,6 +111,67 @@ export async function conflictsRoutes(app: FastifyInstance) {
 
     const slots = await conflictService.suggestSlots(schoolId, input);
     return { data: { slots } };
+  });
+
+  // Apply a suggested time slot to reschedule an event
+  app.post('/schools/:schoolId/conflicts/apply-slot', {
+    preHandler: [requireRole(...STAFF)],
+  }, async (request, reply) => {
+    const { schoolId } = request.params as { schoolId: string };
+    const input = applySlotSchema.parse(request.body);
+    const newDatetime = new Date(input.newDatetime);
+
+    if (input.eventType === 'GAME') {
+      const game = await prisma.game.findUnique({
+        where: { id: input.eventId },
+        include: { season: { include: { team: true } } },
+      });
+      if (!game || game.season.team.schoolId !== schoolId) {
+        return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Game not found' } });
+      }
+      const updated = await prisma.game.update({
+        where: { id: input.eventId },
+        data: { datetime: newDatetime },
+        include: { facility: { select: { name: true } } },
+      });
+      // Re-check conflicts at the new time
+      const conflicts = await conflictService.checkEventConflicts({
+        datetime: newDatetime,
+        seasonId: game.seasonId,
+        facilityId: game.facilityId,
+      });
+      return {
+        data: {
+          event: { id: updated.id, type: 'GAME', datetime: updated.datetime, opponent: updated.opponent, facilityName: updated.facility?.name ?? null },
+          conflicts,
+        },
+      };
+    } else {
+      const practice = await prisma.practice.findUnique({
+        where: { id: input.eventId },
+        include: { season: { include: { team: true } } },
+      });
+      if (!practice || practice.season.team.schoolId !== schoolId) {
+        return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Practice not found' } });
+      }
+      const updated = await prisma.practice.update({
+        where: { id: input.eventId },
+        data: { datetime: newDatetime },
+        include: { facility: { select: { name: true } } },
+      });
+      const conflicts = await conflictService.checkEventConflicts({
+        datetime: newDatetime,
+        durationMinutes: practice.durationMinutes,
+        seasonId: practice.seasonId,
+        facilityId: practice.facilityId,
+      });
+      return {
+        data: {
+          event: { id: updated.id, type: 'PRACTICE', datetime: updated.datetime, facilityName: updated.facility?.name ?? null },
+          conflicts,
+        },
+      };
+    }
   });
 
   // Get school-wide conflict summary (dashboard)

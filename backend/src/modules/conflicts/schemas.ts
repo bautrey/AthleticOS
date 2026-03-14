@@ -57,6 +57,14 @@ export const suggestSlotsSchema = z.object({
 
 export type SuggestSlotsInput = z.infer<typeof suggestSlotsSchema>;
 
+export const applySlotSchema = z.object({
+  eventType: z.enum(['GAME', 'PRACTICE']),
+  eventId: z.string().min(1),
+  newDatetime: z.string().datetime(),
+});
+
+export type ApplySlotInput = z.infer<typeof applySlotSchema>;
+
 export const batchOverrideSchema = z.object({
   overrides: z.array(z.object({
     eventType: z.enum(['GAME', 'PRACTICE']),
