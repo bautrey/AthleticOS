@@ -77,13 +77,13 @@ export function WeeklyBoardPage() {
   });
 
   // Fetch teams and facilities for filters
-  const { data: teams = [] } = useQuery({
+  const { data: _teams = [] } = useQuery({
     queryKey: ['teams', schoolId],
     queryFn: () => teamsApi.list(schoolId!),
     enabled: !!schoolId,
   });
 
-  const { data: facilities = [] } = useQuery({
+  const { data: _facilities = [] } = useQuery({
     queryKey: ['facilities', schoolId],
     queryFn: () => facilitiesApi.list(schoolId!),
     enabled: !!schoolId,

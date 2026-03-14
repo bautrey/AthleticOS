@@ -16,7 +16,6 @@ const START_HOUR = 7;
 const END_HOUR = 22; // 10pm
 const SLOT_HEIGHT = 28; // px per 30-min slot
 const TOTAL_SLOTS = (END_HOUR - START_HOUR) * 2; // 30 half-hour slots
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function getDayDates(weekStart: Date): Date[] {
   const dates: Date[] = [];
