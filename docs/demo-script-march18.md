@@ -47,11 +47,11 @@ Key points for Truman:
 > "Here's where it gets real. How many of you have had a scheduling conflict this season?"
 
 - Navigate to **Conflicts page**
-- Show a conflict: "Baseball and Track are both scheduled at West Field on the same day"
+- Show a conflict: "Baseball and Track are both scheduled at Tom Landry Stadium on the same day"
 - Show the **detail panel** — what's conflicting, why, severity
 - Show **priority rules**: "Varsity trumps JV. Football trumps everyone on Friday nights. You set these rules once, and the system suggests who should move."
 - **Override** a conflict — "Sometimes it's fine. You just say 'I know, it's okay' and override it"
-- Show **suggested resolution** — "Or the system says: Track should move to the turf field at 4pm. One click."
+- Show **suggested resolution** — "Or the system says: Track should move to the Trojan Blue Track at 4pm. One click."
 - **Key message:** "No more 15 texts and emails to figure out if your banquet conflicts with softball."
 
 ### Scene 5: Facility Requests — "Goodbye SchoolDude" (1 min)

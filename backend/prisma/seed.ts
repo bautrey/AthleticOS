@@ -31,25 +31,25 @@ async function main() {
 
   // Create facilities
   const mainGym = await prisma.facility.create({
-    data: { schoolId: school.id, name: 'Main Gymnasium', type: 'GYM', capacity: 2500 },
+    data: { schoolId: school.id, name: 'MCB Gym', type: 'GYM', capacity: 2500 },
   });
   const auxGym = await prisma.facility.create({
-    data: { schoolId: school.id, name: 'Auxiliary Gym', type: 'GYM', capacity: 500 },
+    data: { schoolId: school.id, name: 'Field House', type: 'GYM', capacity: 500 },
   });
   const footballField = await prisma.facility.create({
-    data: { schoolId: school.id, name: 'Chaparral Stadium', type: 'FIELD', capacity: 8000 },
+    data: { schoolId: school.id, name: 'Tom Landry Stadium', type: 'FIELD', capacity: 5000 },
   });
   const baseballField = await prisma.facility.create({
-    data: { schoolId: school.id, name: 'Baseball Complex', type: 'FIELD', capacity: 1000 },
+    data: { schoolId: school.id, name: 'Trojan Baseball Field', type: 'FIELD', capacity: 1000 },
   });
   const pool = await prisma.facility.create({
     data: { schoolId: school.id, name: 'Aquatic Center', type: 'POOL', capacity: 400 },
   });
   const track = await prisma.facility.create({
-    data: { schoolId: school.id, name: 'Track & Field Complex', type: 'TRACK', capacity: 2000 },
+    data: { schoolId: school.id, name: 'Trojan Blue Track', type: 'TRACK', capacity: 2000 },
   });
   const tennisCourts = await prisma.facility.create({
-    data: { schoolId: school.id, name: 'Tennis Center', type: 'COURT', capacity: 300 },
+    data: { schoolId: school.id, name: 'Trojan Tennis Courts', type: 'COURT', capacity: 300 },
   });
 
   // Create teams
@@ -266,7 +266,7 @@ async function main() {
       schoolId: school.id,
       type: 'MAINTENANCE',
       name: 'Gym Floor Refinishing',
-      description: 'Main gym floor being refinished',
+      description: 'MCB Gym floor being refinished',
       scope: 'FACILITY',
       facilityId: mainGym.id,
       startDatetime: new Date('2026-03-02T00:00:00Z'),
@@ -291,7 +291,7 @@ async function main() {
       schoolId: school.id,
       type: 'MAINTENANCE',
       name: 'Facility Inspection',
-      description: 'Annual safety and compliance inspection of Main Gymnasium',
+      description: 'Annual safety and compliance inspection of MCB Gym',
       scope: 'FACILITY',
       facilityId: mainGym.id,
       startDatetime: new Date('2026-03-03T00:00:00Z'),
@@ -314,7 +314,7 @@ async function main() {
 
   // === EXPLICIT FACILITY DOUBLE-BOOKINGS ===
 
-  // Double-booking 1: Baseball practice AND Soccer practice at Baseball Complex, same time
+  // Double-booking 1: Baseball practice AND Soccer practice at Trojan Baseball Field, same time
   const doubleBook1Date = new Date('2026-03-06T16:00:00');
   await prisma.practice.create({
     data: {
@@ -331,11 +331,11 @@ async function main() {
       facilityId: baseballField.id,
       datetime: doubleBook1Date,
       durationMinutes: 90,
-      notes: 'Field training overflow from Chaparral',
+      notes: 'Field training overflow from Tom Landry Stadium',
     },
   });
 
-  // Double-booking 2: Boys Basketball practice AND Girls Basketball practice at Main Gym, same time
+  // Double-booking 2: Boys Basketball practice AND Girls Basketball practice at MCB Gym, same time
   const doubleBook2Date = new Date('2026-03-07T15:30:00');
   await prisma.practice.create({
     data: {
@@ -354,7 +354,7 @@ async function main() {
     },
   });
 
-  // Double-booking 3: Track practice AND Soccer game at Chaparral Stadium, same time
+  // Double-booking 3: Track practice AND Soccer game at Tom Landry Stadium, same time
   const doubleBook3Date = new Date('2026-03-10T16:00:00');
   await prisma.practice.create({
     data: {
