@@ -101,13 +101,19 @@ bd close bd-42 --reason "Completed" --json
    - `bd create "Found bug" --description="Details about what was found" -p 1 --deps discovered-from:<parent-id>`
 5. **Complete**: `bd close <id> --reason "Done"`
 
-### Auto-Sync
+### Auto-Sync & Dashboard Export
 
 bd automatically syncs with git:
 
 - Exports to `.beads/issues.jsonl` after changes (5s debounce)
 - Imports from JSONL when newer (e.g., after `git pull`)
 - No manual export/import needed!
+
+**Dashboard**: A central dashboard at http://localhost:3333 reads `.beads/issues.jsonl` from all projects.
+Post-commit hooks and Claude Stop hooks auto-export, but if needed:
+```bash
+bd export -o .beads/issues.jsonl
+```
 
 ### Important Rules
 
