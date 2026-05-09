@@ -1,0 +1,62 @@
+[
+  {
+    "id": "bb-roster-vbb-001",
+    "team_id": "bb-team-vbb-boys",
+    "student_id": "bb-stu-1001",
+    "first_name": "Ethan",
+    "last_name": "Carter",
+    "grade": "12",
+    "jersey_number": "10",
+    "position": "PG"
+  },
+  {
+    "id": "bb-roster-vbb-002",
+    "team_id": "bb-team-vbb-boys",
+    "student_id": "bb-stu-1002",
+    "first_name": "Jordan",
+    "last_name": "Reyes",
+    "grade": "11",
+    "jersey_number": "23",
+    "position": "SG"
+  },
+  {
+    "id": "bb-roster-vbb-003",
+    "team_id": "bb-team-vbb-boys",
+    "student_id": "bb-stu-1003",
+    "first_name": "Mason",
+    "last_name": "Wright",
+    "grade": "12",
+    "jersey_number": "32",
+    "position": "PF"
+  },
+  {
+    "id": "bb-roster-vbase-001",
+    "team_id": "bb-team-vbase",
+    "student_id": "bb-stu-2001",
+    "first_name": "Caleb",
+    "last_name": "Morgan",
+    "grade": "12",
+    "jersey_number": "7",
+    "position": "P"
+  },
+  {
+    "id": "bb-roster-vbase-002",
+    "team_id": "bb-team-vbase",
+    "student_id": "bb-stu-2002",
+    "first_name": "Noah",
+    "last_name": "Bennett",
+    "grade": "11",
+    "jersey_number": "12",
+    "position": "SS"
+  },
+  {
+    "id": "bb-roster-vsoccer-001",
+    "team_id": "bb-team-vsoccer-boys",
+    "student_id": "bb-stu-3001",
+    "first_name": "Lucas",
+    "last_name": "Hernandez",
+    "grade": "12",
+    "jersey_number": "9",
+    "position": "ST"
+  }
+]

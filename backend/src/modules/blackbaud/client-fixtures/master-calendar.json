@@ -1,0 +1,58 @@
+[
+  {
+    "id": "bb-cal-001",
+    "title": "Spring Midterm Exams",
+    "description": "All upper school exams. No practices or games during exam blocks.",
+    "start_time": "2026-03-09T08:00:00-05:00",
+    "end_time": "2026-03-13T15:30:00-05:00",
+    "all_day": false,
+    "category": "exam"
+  },
+  {
+    "id": "bb-cal-002",
+    "title": "Spring Break",
+    "description": "Campus closed. No school-sponsored activities.",
+    "start_time": "2026-03-16T00:00:00-05:00",
+    "end_time": "2026-03-20T23:59:59-05:00",
+    "all_day": true,
+    "category": "holiday"
+  },
+  {
+    "id": "bb-cal-003",
+    "title": "Upper School Assembly — Easter Chapel",
+    "description": "Mandatory chapel. All students excused from 9:30-10:30 classes.",
+    "start_time": "2026-04-02T09:30:00-05:00",
+    "end_time": "2026-04-02T10:30:00-05:00",
+    "all_day": false,
+    "category": "assembly",
+    "location": "MCB Gym"
+  },
+  {
+    "id": "bb-cal-004",
+    "title": "Fine Arts Night — Spring Showcase",
+    "description": "Joint orchestra, choir, and visual arts showcase.",
+    "start_time": "2026-04-25T18:30:00-05:00",
+    "end_time": "2026-04-25T21:00:00-05:00",
+    "all_day": false,
+    "category": "fine_arts",
+    "location": "MCB Gym"
+  },
+  {
+    "id": "bb-cal-005",
+    "title": "Faculty In-Service Day",
+    "description": "No school for students. Athletic practices may continue.",
+    "start_time": "2026-04-10T08:00:00-05:00",
+    "end_time": "2026-04-10T15:30:00-05:00",
+    "all_day": false,
+    "category": "in_service"
+  },
+  {
+    "id": "bb-cal-006",
+    "title": "Standardized Testing — Upper School",
+    "description": "School-wide testing. No afternoon practices through 1:00 PM.",
+    "start_time": "2026-03-05T08:00:00-06:00",
+    "end_time": "2026-03-05T13:00:00-06:00",
+    "all_day": false,
+    "category": "exam"
+  }
+]

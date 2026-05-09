@@ -1,0 +1,37 @@
+[
+  {
+    "id": "bb-team-vfb",
+    "name": "Varsity Football",
+    "sport": "Football",
+    "level": "Varsity",
+    "active": true
+  },
+  {
+    "id": "bb-team-vbb-boys",
+    "name": "Varsity Basketball (Boys)",
+    "sport": "Basketball",
+    "level": "Varsity",
+    "active": true
+  },
+  {
+    "id": "bb-team-vbb-girls",
+    "name": "Varsity Basketball (Girls)",
+    "sport": "Basketball",
+    "level": "Varsity",
+    "active": true
+  },
+  {
+    "id": "bb-team-vbase",
+    "name": "Varsity Baseball",
+    "sport": "Baseball",
+    "level": "Varsity",
+    "active": true
+  },
+  {
+    "id": "bb-team-vsoccer-boys",
+    "name": "Varsity Soccer (Boys)",
+    "sport": "Soccer",
+    "level": "Varsity",
+    "active": true
+  }
+]
