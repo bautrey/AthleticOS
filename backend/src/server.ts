@@ -28,6 +28,7 @@ import { facilityRequestRoutes } from './modules/facility-requests/routes.js';
 import { bulkOpsRoutes } from './modules/bulk-ops/routes.js';
 import { operationsRoutes } from './modules/operations/routes.js';
 import { quickAddRoutes } from './modules/quick-add/routes.js';
+import { blackbaudRoutes, blackbaudCallbackRoutes } from './modules/blackbaud/routes.js';
 import { AppError } from './common/errors.js';
 import { ZodError } from 'zod';
 
@@ -74,6 +75,10 @@ app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOStrin
 await app.register(publicScheduleRoutes, { prefix: '/api/v1' });
 await app.register(publicCalendarFeedRoutes);
 
+// OAuth callback — registered at root because the redirect URI registered with Blackbaud
+// is `/auth/blackbaud/callback`, not `/api/v1/auth/blackbaud/callback`.
+await app.register(blackbaudCallbackRoutes);
+
 // API routes (auth required)
 await app.register(async (api) => {
   await api.register(authRoutes);
@@ -98,6 +103,7 @@ await app.register(async (api) => {
   await api.register(bulkOpsRoutes);
   await api.register(operationsRoutes);
   await api.register(quickAddRoutes);
+  await api.register(blackbaudRoutes);
 }, { prefix: '/api/v1' });
 
 // Start
