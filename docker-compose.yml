@@ -26,6 +26,15 @@ services:
       PORT: 8000
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       APP_URL: http://localhost:3005
+      # Blackbaud SKY API — defaults to mock mode. To use live OAuth against Blackbaud,
+      # set BLACKBAUD_MODE=live and source BLACKBAUD_APP_SECRET / BLACKBAUD_SUBSCRIPTION_KEY
+      # from macOS keychain in your shell before `docker compose up`:
+      #   export BLACKBAUD_APP_SECRET=$(security find-generic-password -a burkestudio -s athleticos-blackbaud-app-secret -w)
+      #   export BLACKBAUD_SUBSCRIPTION_KEY=$(security find-generic-password -a burkestudio -s athleticos-blackbaud-subscription-key -w)
+      BLACKBAUD_MODE: ${BLACKBAUD_MODE:-mock}
+      BLACKBAUD_APP_SECRET: ${BLACKBAUD_APP_SECRET:-}
+      BLACKBAUD_SUBSCRIPTION_KEY: ${BLACKBAUD_SUBSCRIPTION_KEY:-}
+      BLACKBAUD_REDIRECT_URI: ${BLACKBAUD_REDIRECT_URI:-http://localhost:8003/auth/blackbaud/callback}
     ports:
       - "8003:8000"
     depends_on:
