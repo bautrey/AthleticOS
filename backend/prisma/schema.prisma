@@ -93,6 +93,7 @@ model School {
   facilityRequests       FacilityRequest[]
   operationsTemplates    OperationsTemplate[]
   eventChecklists        EventChecklist[]
+  blackbaudConnection    BlackbaudConnection?
 
   @@map("schools")
 }
@@ -586,4 +587,27 @@ model ChecklistItem {
   assignee  User?          @relation(fields: [assigneeId], references: [id])
 
   @@map("checklist_items")
+}
+
+// ============ Blackbaud SKY API Integration ============
+
+// Per-school OAuth connection to Blackbaud SKY API.
+// Trade-off: tokens stored as plaintext for now. Render disk is encrypted at rest and the
+// DB is private; if we promote to true app-level secrets, swap to AES-GCM via Node crypto
+// and store the key in env. Refresh tokens have ~60 day idle TTL per Blackbaud docs.
+model BlackbaudConnection {
+  id            String   @id @default(cuid())
+  schoolId      String   @unique @map("school_id")
+  accessToken   String   @map("access_token")
+  refreshToken  String   @map("refresh_token")
+  expiresAt     DateTime @map("expires_at")
+  tokenType     String   @default("Bearer") @map("token_type")
+  scope         String?
+  environmentId String?  @map("environment_id") // Blackbaud environment_id, populated on first API call
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("blackbaud_connections")
 }
