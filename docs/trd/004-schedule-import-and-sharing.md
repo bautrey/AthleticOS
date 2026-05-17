@@ -326,8 +326,8 @@ POST /api/v1/seasons/:seasonId/shares
   "data": {
     "id": "clx...",
     "token": "abc123def456ghij789klmno",
-    "url": "https://app.athleticos.com/s/abc123def456ghij789klmno",
-    "embedCode": "<iframe src=\"https://app.athleticos.com/s/abc123def456ghij789klmno/embed\" width=\"100%\" height=\"600\" frameborder=\"0\" style=\"border:1px solid #e5e7eb;border-radius:8px;\"></iframe>",
+    "url": "https://app.athleticos.co/s/abc123def456ghij789klmno",
+    "embedCode": "<iframe src=\"https://app.athleticos.co/s/abc123def456ghij789klmno/embed\" width=\"100%\" height=\"600\" frameborder=\"0\" style=\"border:1px solid #e5e7eb;border-radius:8px;\"></iframe>",
     "title": "Varsity Basketball 2026",
     "showNotes": false,
     "showFacility": true,

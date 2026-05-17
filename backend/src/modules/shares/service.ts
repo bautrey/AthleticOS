@@ -11,13 +11,13 @@ import { config } from '../../config.js';
 
 // Generate full URL for share
 function getShareUrl(token: string): string {
-  const baseUrl = config.PUBLIC_URL || 'https://app.athleticos.com';
+  const baseUrl = config.PUBLIC_URL || 'https://app.athleticos.co';
   return `${baseUrl}/s/${token}`;
 }
 
 // Generate embed code
 function getEmbedCode(token: string): string {
-  const baseUrl = config.PUBLIC_URL || 'https://app.athleticos.com';
+  const baseUrl = config.PUBLIC_URL || 'https://app.athleticos.co';
   return `<iframe src="${baseUrl}/s/${token}/embed" width="100%" height="600" frameborder="0" style="border:1px solid #e5e7eb;border-radius:8px;"></iframe>`;
 }
 

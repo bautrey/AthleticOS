@@ -42,7 +42,7 @@ function generateICS(schedule: {
         : `vs ${game.opponent} (Neutral)`;
 
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:game-${startDate.getTime()}@athleticos.com`);
+    lines.push(`UID:game-${startDate.getTime()}@athleticos.co`);
     lines.push(`DTSTAMP:${formatICSDate(new Date())}`);
     lines.push(`DTSTART:${formatICSDate(startDate)}`);
     lines.push(`DTEND:${formatICSDate(endDate)}`);
@@ -59,7 +59,7 @@ function generateICS(schedule: {
     const endDate = new Date(startDate.getTime() + practice.duration * 60 * 1000);
 
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:practice-${startDate.getTime()}@athleticos.com`);
+    lines.push(`UID:practice-${startDate.getTime()}@athleticos.co`);
     lines.push(`DTSTAMP:${formatICSDate(new Date())}`);
     lines.push(`DTSTART:${formatICSDate(startDate)}`);
     lines.push(`DTEND:${formatICSDate(endDate)}`);
