@@ -43,3 +43,16 @@ prisma/*.db-journal
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Beads migration backups
+.beads-backup-*/
+
+# Local MCP config (machine-specific paths)
+.mcp.json
+
+# Local scratch — meeting transcripts, intermediate artifacts not meant for git
+docs/scratch/
+.scratch/
