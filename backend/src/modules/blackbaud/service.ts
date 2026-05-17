@@ -4,17 +4,25 @@ import { prisma } from '../../common/db.js';
 import { config } from '../../config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../../common/errors.js';
 import { blackbaudTokenResponseSchema, type BlackbaudTokenResponse } from './schemas.js';
+import { encryptToken, decryptToken } from './token-crypto.js';
 
 // Blackbaud OAuth + API endpoints. These are constant for the SKY API.
 // Docs: https://developer.blackbaud.com/skyapi/docs/authorization
 export const BLACKBAUD_AUTHORIZE_URL = 'https://oauth2.sky.blackbaud.com/authorization';
 export const BLACKBAUD_TOKEN_URL = 'https://oauth2.sky.blackbaud.com/token';
 
-// Scopes we request. SKY's standard for SIS/Education Edge.
-// Burke can tighten/expand this list once Blackbaud confirms exact scope strings during testing.
-// TODO: verify exact scope names when running first live OAuth — Blackbaud's docs are
-// a bit thin on whether scopes are space- or comma-separated and what each one is named.
-const DEFAULT_SCOPES = ['offline_access'];
+// Scopes we request, sourced from BLACKBAUD_SCOPES (space-separated) in config.
+// Default = "offline_access" only.
+//
+// Why no per-API scopes: Blackbaud's SKY OAuth does NOT publish per-API scopes — see their
+// OIDC discovery doc at https://oauth2.sky.blackbaud.com/.well-known/openid-configuration,
+// which omits `scopes_supported`. Access to athletics teams/schedules/roster + the master
+// events list is governed by the authorizing user's role in the school's environment
+// (e.g. Athletic Group Manager / Calendar Manager / SIS admin), not by scope strings.
+// `offline_access` is the only documented scope and is required to receive a refresh_token.
+function getRequestedScopes(): string[] {
+  return config.BLACKBAUD_SCOPES.split(/\s+/).filter(Boolean);
+}
 
 interface OAuthStatePayload {
   schoolId: string;
@@ -41,8 +49,9 @@ export const blackbaudService = {
       redirect_uri: config.BLACKBAUD_REDIRECT_URI,
       state,
     });
-    if (DEFAULT_SCOPES.length > 0) {
-      params.set('scope', DEFAULT_SCOPES.join(' '));
+    const scopes = getRequestedScopes();
+    if (scopes.length > 0) {
+      params.set('scope', scopes.join(' '));
     }
     return `${BLACKBAUD_AUTHORIZE_URL}?${params.toString()}`;
   },
@@ -181,23 +190,29 @@ export const blackbaudService = {
 
   /**
    * Persist a token response to the BlackbaudConnection table (upsert by schoolId).
+   * access_token and refresh_token are encrypted at rest (AES-256-GCM, key derived
+   * from JWT_SECRET via HKDF — see ./token-crypto.ts).
+   *
+   * Returns the row with PLAINTEXT tokens populated, so callers don't have to decrypt.
    */
   async saveConnection(schoolId: string, tokens: BlackbaudTokenResponse) {
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-    return prisma.blackbaudConnection.upsert({
+    const encAccess = encryptToken(tokens.access_token);
+    const encRefresh = encryptToken(tokens.refresh_token);
+    const row = await prisma.blackbaudConnection.upsert({
       where: { schoolId },
       create: {
         schoolId,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: encAccess,
+        refreshToken: encRefresh,
         expiresAt,
         tokenType: tokens.token_type ?? 'Bearer',
         scope: tokens.scope ?? null,
         environmentId: tokens.environment_id ?? null,
       },
       update: {
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: encAccess,
+        refreshToken: encRefresh,
         expiresAt,
         tokenType: tokens.token_type ?? 'Bearer',
         scope: tokens.scope ?? null,
@@ -205,15 +220,23 @@ export const blackbaudService = {
         ...(tokens.environment_id ? { environmentId: tokens.environment_id } : {}),
       },
     });
+    // Hand callers plaintext — they don't need to know about encryption-at-rest.
+    return { ...row, accessToken: tokens.access_token, refreshToken: tokens.refresh_token };
   },
 
   /**
    * Fetch a connection, refreshing the access token if it's expired or about to expire.
-   * Returns the connection with a fresh access token.
+   * Returns the connection with a fresh, DECRYPTED access token + refresh token.
    */
   async getConnectionWithFreshToken(schoolId: string) {
-    const conn = await prisma.blackbaudConnection.findUnique({ where: { schoolId } });
-    if (!conn) throw new NotFoundError('BlackbaudConnection', schoolId);
+    const stored = await prisma.blackbaudConnection.findUnique({ where: { schoolId } });
+    if (!stored) throw new NotFoundError('BlackbaudConnection', schoolId);
+
+    const conn = {
+      ...stored,
+      accessToken: decryptToken(stored.accessToken),
+      refreshToken: decryptToken(stored.refreshToken),
+    };
 
     // Refresh if expiring within the next 60 seconds.
     const skewMs = 60 * 1000;

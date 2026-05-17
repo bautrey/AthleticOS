@@ -22,6 +22,13 @@ const envSchema = z.object({
   BLACKBAUD_MODE: z.enum(['mock', 'live']).default('mock'),
   // Where the OAuth callback lives. Must match a redirect URI registered with Blackbaud.
   BLACKBAUD_REDIRECT_URI: z.string().default('http://localhost:8003/auth/blackbaud/callback'),
+  // OAuth scopes to request. Space-separated. Default = offline_access only — Blackbaud
+  // SKY does NOT use per-API scopes (access is governed by the authorizing user's
+  // permissions in their environment, e.g. Athletic Group Manager / Calendar Manager).
+  // Their OIDC discovery doc (https://oauth2.sky.blackbaud.com/.well-known/openid-configuration)
+  // omits `scopes_supported`, confirming this. `offline_access` is required to get a
+  // refresh_token back. Override here only if Blackbaud documents new scopes later.
+  BLACKBAUD_SCOPES: z.string().default('offline_access'),
 });
 
 export const config = envSchema.parse(process.env);

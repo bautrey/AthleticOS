@@ -1,6 +1,6 @@
 // backend/src/modules/blackbaud/routes.ts
 import type { FastifyInstance } from 'fastify';
-import { authenticate, requireRole, MANAGEMENT } from '../../common/middleware/auth.js';
+import { authenticate, MANAGEMENT } from '../../common/middleware/auth.js';
 import { config } from '../../config.js';
 import { prisma } from '../../common/db.js';
 import { ForbiddenError } from '../../common/errors.js';

@@ -1,58 +1,52 @@
 [
   {
-    "id": "bb-cal-001",
+    "id": 800001,
     "title": "Spring Midterm Exams",
     "description": "All upper school exams. No practices or games during exam blocks.",
-    "start_time": "2026-03-09T08:00:00-05:00",
-    "end_time": "2026-03-13T15:30:00-05:00",
-    "all_day": false,
-    "category": "exam"
+    "start_date": "2026-03-09T08:00:00-05:00",
+    "end_date": "2026-03-13T15:30:00-05:00",
+    "categories": [{ "id": 1, "name": "Exam", "primary": true }]
   },
   {
-    "id": "bb-cal-002",
+    "id": 800002,
     "title": "Spring Break",
     "description": "Campus closed. No school-sponsored activities.",
-    "start_time": "2026-03-16T00:00:00-05:00",
-    "end_time": "2026-03-20T23:59:59-05:00",
-    "all_day": true,
-    "category": "holiday"
+    "start_date": "2026-03-16T00:00:00-05:00",
+    "end_date": "2026-03-20T23:59:59-05:00",
+    "categories": [{ "id": 2, "name": "Holiday", "primary": true }]
   },
   {
-    "id": "bb-cal-003",
+    "id": 800003,
     "title": "Upper School Assembly — Easter Chapel",
     "description": "Mandatory chapel. All students excused from 9:30-10:30 classes.",
-    "start_time": "2026-04-02T09:30:00-05:00",
-    "end_time": "2026-04-02T10:30:00-05:00",
-    "all_day": false,
-    "category": "assembly",
-    "location": "MCB Gym"
+    "start_date": "2026-04-02T09:30:00-05:00",
+    "end_date": "2026-04-02T10:30:00-05:00",
+    "location": { "type": "Existing", "name": "MCB Gym" },
+    "categories": [{ "id": 3, "name": "Assembly", "primary": true }]
   },
   {
-    "id": "bb-cal-004",
+    "id": 800004,
     "title": "Fine Arts Night — Spring Showcase",
     "description": "Joint orchestra, choir, and visual arts showcase.",
-    "start_time": "2026-04-25T18:30:00-05:00",
-    "end_time": "2026-04-25T21:00:00-05:00",
-    "all_day": false,
-    "category": "fine_arts",
-    "location": "MCB Gym"
+    "start_date": "2026-04-25T18:30:00-05:00",
+    "end_date": "2026-04-25T21:00:00-05:00",
+    "location": { "type": "Existing", "name": "MCB Gym" },
+    "categories": [{ "id": 4, "name": "Fine Arts", "primary": true }]
   },
   {
-    "id": "bb-cal-005",
+    "id": 800005,
     "title": "Faculty In-Service Day",
     "description": "No school for students. Athletic practices may continue.",
-    "start_time": "2026-04-10T08:00:00-05:00",
-    "end_time": "2026-04-10T15:30:00-05:00",
-    "all_day": false,
-    "category": "in_service"
+    "start_date": "2026-04-10T08:00:00-05:00",
+    "end_date": "2026-04-10T15:30:00-05:00",
+    "categories": [{ "id": 5, "name": "In Service", "primary": true }]
   },
   {
-    "id": "bb-cal-006",
+    "id": 800006,
     "title": "Standardized Testing — Upper School",
     "description": "School-wide testing. No afternoon practices through 1:00 PM.",
-    "start_time": "2026-03-05T08:00:00-06:00",
-    "end_time": "2026-03-05T13:00:00-06:00",
-    "all_day": false,
-    "category": "exam"
+    "start_date": "2026-03-05T08:00:00-06:00",
+    "end_date": "2026-03-05T13:00:00-06:00",
+    "categories": [{ "id": 1, "name": "Exam", "primary": true }]
   }
 ]

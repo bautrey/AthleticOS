@@ -1,6 +1,6 @@
 // backend/src/modules/blackbaud/client.test.ts
-// Mock client returns shape-stable fixtures; live client builds correct headers + URL,
-// and 401 → refresh → retry happy path works.
+// Mock client returns shape-stable fixtures; live client builds correct URL + headers,
+// parses through Zod schemas, and recovers from a 401 by refreshing then retrying once.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   MockBlackbaudSkyClient,
@@ -19,73 +19,85 @@ function jsonResponse(status: number, body: unknown): Response {
 describe('MockBlackbaudSkyClient', () => {
   const client = new MockBlackbaudSkyClient();
 
-  it('listSchools returns at least TCA', async () => {
-    const schools = await client.listSchools();
-    expect(schools.length).toBeGreaterThan(0);
-    expect(schools[0]).toMatchObject({ id: expect.any(String), name: expect.any(String) });
-    expect(schools.find((s) => /Trinity/i.test(s.name))).toBeTruthy();
-  });
-
-  it('listTeams returns multiple TCA teams with sport + level', async () => {
-    const teams = await client.listTeams('tca-001');
+  it('listTeams returns multiple TCA teams with sport object', async () => {
+    const teams = await client.listTeams();
     expect(teams.length).toBeGreaterThanOrEqual(3);
     for (const t of teams) {
-      expect(t.id).toBeTruthy();
+      expect(typeof t.id).toBe('number');
       expect(t.name).toBeTruthy();
       expect(t.sport).toBeTruthy();
+      expect(t.sport.name).toBeTruthy();
     }
   });
 
-  it('getTeamSchedule filters by team_id', async () => {
-    const schedule = await client.getTeamSchedule('bb-team-vbb-boys');
+  it('getTeamSchedule filters by team_id and excludes practices by default', async () => {
+    const schedule = await client.getTeamSchedule(4316267);
     expect(schedule.length).toBeGreaterThan(0);
     for (const e of schedule) {
-      expect(e.team_id).toBe('bb-team-vbb-boys');
-      expect(['game', 'practice', 'scrimmage']).toContain(e.type);
-      expect(new Date(e.start_time).toString()).not.toBe('Invalid Date');
+      expect(e.team_id).toBe(4316267);
+      expect(e.practice).not.toBe(true);
+      expect(new Date(e.start_time ?? e.game_date ?? 0).toString()).not.toBe('Invalid Date');
     }
   });
 
-  it('getTeamRoster filters by team_id', async () => {
-    const roster = await client.getTeamRoster('bb-team-vbb-boys');
-    expect(roster.length).toBeGreaterThan(0);
-    for (const r of roster) {
-      expect(r.team_id).toBe('bb-team-vbb-boys');
-      expect(r.first_name).toBeTruthy();
-      expect(r.last_name).toBeTruthy();
+  it('getTeamSchedule includes practices when includePractice=true', async () => {
+    const withPractice = await client.getTeamSchedule(4316267, { includePractice: true });
+    expect(withPractice.some((e) => e.practice === true)).toBe(true);
+  });
+
+  it('getTeamRoster returns the roster for a team_id', async () => {
+    const roster = await client.getTeamRoster(4316267);
+    expect(roster.id).toBe(4316267);
+    expect(roster.players.value.length).toBeGreaterThan(0);
+    for (const p of roster.players.value) {
+      expect(typeof p.id).toBe('number');
+      expect(p.first_name).toBeTruthy();
+      expect(p.last_name).toBeTruthy();
     }
+  });
+
+  it('getTeamRoster returns an empty roster shape for an unknown team', async () => {
+    const roster = await client.getTeamRoster(999_999);
+    expect(roster.id).toBe(999_999);
+    expect(roster.coaches.value).toEqual([]);
+    expect(roster.players.value).toEqual([]);
   });
 
   it('listMasterCalendarEvents filters by date window', async () => {
-    const all = await client.listMasterCalendarEvents('2026-01-01', '2026-12-31');
+    const all = await client.listMasterCalendarEvents({
+      start_date: '2026-01-01T00:00:00Z',
+      end_date: '2026-12-31T23:59:59Z',
+    });
     expect(all.length).toBeGreaterThan(0);
 
-    const narrow = await client.listMasterCalendarEvents('2026-03-01', '2026-03-31');
+    const narrow = await client.listMasterCalendarEvents({
+      start_date: '2026-03-01T00:00:00Z',
+      end_date: '2026-03-31T23:59:59Z',
+    });
     expect(narrow.length).toBeGreaterThan(0);
     expect(narrow.length).toBeLessThanOrEqual(all.length);
     for (const e of narrow) {
-      const t = new Date(e.start_time).getTime();
-      expect(t).toBeGreaterThanOrEqual(new Date('2026-03-01').getTime());
-      expect(t).toBeLessThanOrEqual(new Date('2026-03-31').getTime());
+      const t = new Date(e.start_date ?? 0).getTime();
+      expect(t).toBeGreaterThanOrEqual(new Date('2026-03-01T00:00:00Z').getTime());
+      expect(t).toBeLessThanOrEqual(new Date('2026-03-31T23:59:59Z').getTime());
     }
   });
 
   it('returns empty array when no team matches', async () => {
-    const schedule = await client.getTeamSchedule('nonexistent-team');
+    const schedule = await client.getTeamSchedule(999_999);
     expect(schedule).toEqual([]);
   });
 });
 
 describe('LiveBlackbaudSkyClient', () => {
-  let fetchSpy: ReturnType<typeof vi.spyOn>;
-  let getConnSpy: ReturnType<typeof vi.spyOn>;
-  let refreshSpy: ReturnType<typeof vi.spyOn>;
-  let saveSpy: ReturnType<typeof vi.spyOn>;
+  let fetchSpy: any;
+  let getConnSpy: any;
+  let refreshSpy: any;
+  let saveSpy: any;
 
   beforeEach(() => {
     // NOTE: config (incl. BLACKBAUD_SUBSCRIPTION_KEY) is parsed at module import,
     // so we rely on the test runner being launched with that env var set.
-    // See npm script `test:blackbaud` in package.json or pass it inline.
 
     // Stub the connection lookup so we never touch Prisma in this test.
     getConnSpy = vi.spyOn(blackbaudService, 'getConnectionWithFreshToken').mockResolvedValue({
@@ -118,15 +130,19 @@ describe('LiveBlackbaudSkyClient', () => {
   });
 
   it('builds correct URL + headers for listTeams', async () => {
-    fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(jsonResponse(200, { value: [{ id: 't1', name: 'T1', sport: 'Basketball' }] }) as any);
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse(200, {
+        count: 1,
+        value: [{ id: 1, name: 'T1', sport: { id: 10, name: 'Basketball' } }],
+      }) as any
+    );
 
     const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
-    const teams = await client.listTeams('tca');
+    const teams = await client.listTeams();
 
     expect(teams).toHaveLength(1);
-    expect(teams[0].id).toBe('t1');
+    expect(teams[0].id).toBe(1);
+    expect(teams[0].sport.name).toBe('Basketball');
 
     const [url, init] = fetchSpy.mock.calls[0];
     expect(url).toBe(`${SKY_API_BASE_URL}/school/v1/athletics/teams`);
@@ -137,36 +153,91 @@ describe('LiveBlackbaudSkyClient', () => {
     expect(headers.get('accept')).toBe('application/json');
   });
 
-  it('encodes teamId path param for getTeamSchedule', async () => {
-    fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(200, []) as any);
+  it('appends school_year query param for listTeams when provided', async () => {
+    fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(jsonResponse(200, { count: 0, value: [] }) as any);
 
     const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
-    await client.getTeamSchedule('team with space');
+    await client.listTeams({ schoolYear: '2025-2026' });
     const [url] = fetchSpy.mock.calls[0];
-    expect(url).toBe(`${SKY_API_BASE_URL}/school/v1/athletics/teams/team%20with%20space/schedule`);
+    expect(url).toBe(`${SKY_API_BASE_URL}/school/v1/athletics/teams?school_year=2025-2026`);
   });
 
-  it('passes start_date/end_date as query params for master calendar', async () => {
-    fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(200, []) as any);
+  it('uses /school/v1/athletics/schedules with team_id query for getTeamSchedule', async () => {
+    fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(jsonResponse(200, { count: 0, value: [] }) as any);
 
     const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
-    await client.listMasterCalendarEvents('2026-03-01', '2026-03-31');
+    await client.getTeamSchedule(4316267, {
+      startDate: '2026-03-01T00:00:00Z',
+      endDate: '2026-03-31T23:59:59Z',
+    });
     const [url] = fetchSpy.mock.calls[0];
-    expect(url).toContain('/school/v1/events?');
+    expect(url).toContain(`${SKY_API_BASE_URL}/school/v1/athletics/schedules?`);
+    expect(url).toContain('team_id=4316267');
+    expect(url).toContain('include_practice=true');
     expect(url).toContain('start_date=2026-03-01');
     expect(url).toContain('end_date=2026-03-31');
   });
 
-  it('handles bare-array responses (no value envelope)', async () => {
+  it('passes include_practice=false when caller opts out', async () => {
     fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        jsonResponse(200, [{ id: 't1', name: 'T1', sport: 'Basketball' }]) as any
-      );
+      .mockResolvedValue(jsonResponse(200, { count: 0, value: [] }) as any);
 
     const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
-    const teams = await client.listTeams('tca');
-    expect(teams).toHaveLength(1);
+    await client.getTeamSchedule(4316267, { includePractice: false });
+    const [url] = fetchSpy.mock.calls[0];
+    expect(url).toContain('include_practice=false');
+  });
+
+  it('encodes teamId path param for getTeamRoster', async () => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse(200, {
+        id: 4316267,
+        coaches: { count: 0, value: [] },
+        players: { count: 0, value: [] },
+      }) as any
+    );
+
+    const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
+    await client.getTeamRoster(4316267);
+    const [url] = fetchSpy.mock.calls[0];
+    expect(url).toBe(`${SKY_API_BASE_URL}/school/v1/athletics/teams/4316267/roster`);
+  });
+
+  it('POSTs to /school/v1/events/list for master calendar with JSON body', async () => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(200, []) as any);
+
+    const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
+    await client.listMasterCalendarEvents({
+      start_date: '2026-03-01T00:00:00Z',
+      end_date: '2026-03-31T23:59:59Z',
+    });
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toBe(`${SKY_API_BASE_URL}/school/v1/events/list`);
+    const initObj = init as RequestInit;
+    expect(initObj.method).toBe('POST');
+    const headers = new Headers(initObj.headers);
+    expect(headers.get('content-type')).toBe('application/json');
+    const body = JSON.parse(initObj.body as string);
+    expect(body.start_date).toBe('2026-03-01T00:00:00Z');
+    expect(body.end_date).toBe('2026-03-31T23:59:59Z');
+  });
+
+  it('throws a clear schema error when the response shape is unexpected', async () => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse(200, {
+        // Wrong shape: id should be number, sport should be object.
+        count: 1,
+        value: [{ id: 'not-a-number', name: 'T1', sport: 'should-be-object' }],
+      }) as any
+    );
+
+    const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
+    await expect(client.listTeams()).rejects.toThrow(/schema validation/i);
   });
 
   it('on 401, refreshes the token, retries, and succeeds', async () => {
@@ -174,20 +245,19 @@ describe('LiveBlackbaudSkyClient', () => {
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse(401, { error: 'invalid_token' }) as any)
       .mockResolvedValueOnce(
-        jsonResponse(200, { value: [{ id: 't1', name: 'T1', sport: 'Basketball' }] }) as any
+        jsonResponse(200, {
+          count: 1,
+          value: [{ id: 1, name: 'T1', sport: { id: 10, name: 'Basketball' } }],
+        }) as any
       );
 
     const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
-    const teams = await client.listTeams('tca');
+    const teams = await client.listTeams();
 
     expect(teams).toHaveLength(1);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(refreshSpy).toHaveBeenCalledTimes(1);
     expect(saveSpy).toHaveBeenCalledTimes(1);
-
-    // Second call should use the refreshed token (we mock getConnectionWithFreshToken to return
-    // a connection on each call — in real life saveConnection would update the row, but here we
-    // just verify the retry happened).
   });
 
   it('on persistent 401, throws after one retry', async () => {
@@ -196,7 +266,7 @@ describe('LiveBlackbaudSkyClient', () => {
       .mockResolvedValue(jsonResponse(401, { error: 'invalid_token' }) as any);
 
     const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
-    await expect(client.listTeams('tca')).rejects.toThrow(/401/);
+    await expect(client.listTeams()).rejects.toThrow(/401/);
     // Should have tried twice: original + 1 retry.
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
@@ -207,7 +277,7 @@ describe('LiveBlackbaudSkyClient', () => {
       .mockResolvedValue(jsonResponse(500, { error: 'internal' }) as any);
 
     const client = new LiveBlackbaudSkyClient({ schoolId: 'tca' });
-    await expect(client.listTeams('tca')).rejects.toThrow(/500/);
+    await expect(client.listTeams()).rejects.toThrow(/500/);
     expect(fetchSpy).toHaveBeenCalledTimes(1); // no retry on 500
   });
 });

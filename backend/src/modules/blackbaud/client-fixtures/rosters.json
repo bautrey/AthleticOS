@@ -1,62 +1,94 @@
 [
   {
-    "id": "bb-roster-vbb-001",
-    "team_id": "bb-team-vbb-boys",
-    "student_id": "bb-stu-1001",
-    "first_name": "Ethan",
-    "last_name": "Carter",
-    "grade": "12",
-    "jersey_number": "10",
-    "position": "PG"
+    "id": 4316267,
+    "coaches": {
+      "count": 1,
+      "value": [
+        {
+          "id": 50001,
+          "first_name": "Marcus",
+          "last_name": "Hill",
+          "preferred_name": "Coach Hill",
+          "title": "Head Coach"
+        }
+      ]
+    },
+    "players": {
+      "count": 3,
+      "value": [
+        {
+          "id": 60001,
+          "first_name": "Ethan",
+          "last_name": "Carter",
+          "jersey": 10,
+          "position": "PG",
+          "team_captain": true
+        },
+        {
+          "id": 60002,
+          "first_name": "Jordan",
+          "last_name": "Reyes",
+          "jersey": 23,
+          "position": "SG"
+        },
+        {
+          "id": 60003,
+          "first_name": "Mason",
+          "last_name": "Wright",
+          "jersey": 32,
+          "position": "PF",
+          "returning_letter": true
+        }
+      ]
+    }
   },
   {
-    "id": "bb-roster-vbb-002",
-    "team_id": "bb-team-vbb-boys",
-    "student_id": "bb-stu-1002",
-    "first_name": "Jordan",
-    "last_name": "Reyes",
-    "grade": "11",
-    "jersey_number": "23",
-    "position": "SG"
+    "id": 4316269,
+    "coaches": {
+      "count": 1,
+      "value": [
+        {
+          "id": 50002,
+          "first_name": "David",
+          "last_name": "Park",
+          "title": "Head Coach"
+        }
+      ]
+    },
+    "players": {
+      "count": 2,
+      "value": [
+        {
+          "id": 60101,
+          "first_name": "Caleb",
+          "last_name": "Morgan",
+          "jersey": 7,
+          "position": "P"
+        },
+        {
+          "id": 60102,
+          "first_name": "Noah",
+          "last_name": "Bennett",
+          "jersey": 12,
+          "position": "SS"
+        }
+      ]
+    }
   },
   {
-    "id": "bb-roster-vbb-003",
-    "team_id": "bb-team-vbb-boys",
-    "student_id": "bb-stu-1003",
-    "first_name": "Mason",
-    "last_name": "Wright",
-    "grade": "12",
-    "jersey_number": "32",
-    "position": "PF"
-  },
-  {
-    "id": "bb-roster-vbase-001",
-    "team_id": "bb-team-vbase",
-    "student_id": "bb-stu-2001",
-    "first_name": "Caleb",
-    "last_name": "Morgan",
-    "grade": "12",
-    "jersey_number": "7",
-    "position": "P"
-  },
-  {
-    "id": "bb-roster-vbase-002",
-    "team_id": "bb-team-vbase",
-    "student_id": "bb-stu-2002",
-    "first_name": "Noah",
-    "last_name": "Bennett",
-    "grade": "11",
-    "jersey_number": "12",
-    "position": "SS"
-  },
-  {
-    "id": "bb-roster-vsoccer-001",
-    "team_id": "bb-team-vsoccer-boys",
-    "student_id": "bb-stu-3001",
-    "first_name": "Lucas",
-    "last_name": "Hernandez",
-    "grade": "12",
-    "jersey_number": "9",
-    "position": "ST"
+    "id": 4316270,
+    "coaches": { "count": 0, "value": [] },
+    "players": {
+      "count": 1,
+      "value": [
+        {
+          "id": 60201,
+          "first_name": "Lucas",
+          "last_name": "Hernandez",
+          "jersey": 9,
+          "position": "ST"
+        }
+      ]
+    }
   }
 ]

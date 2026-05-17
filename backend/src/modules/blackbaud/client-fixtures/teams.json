@@ -1,37 +1,27 @@
 [
   {
-    "id": "bb-team-vfb",
+    "id": 4316266,
     "name": "Varsity Football",
-    "sport": "Football",
-    "level": "Varsity",
-    "active": true
+    "sport": { "id": 31080, "name": "Football" }
   },
   {
-    "id": "bb-team-vbb-boys",
+    "id": 4316267,
     "name": "Varsity Basketball (Boys)",
-    "sport": "Basketball",
-    "level": "Varsity",
-    "active": true
+    "sport": { "id": 31081, "name": "Basketball" }
   },
   {
-    "id": "bb-team-vbb-girls",
+    "id": 4316268,
     "name": "Varsity Basketball (Girls)",
-    "sport": "Basketball",
-    "level": "Varsity",
-    "active": true
+    "sport": { "id": 31081, "name": "Basketball" }
   },
   {
-    "id": "bb-team-vbase",
+    "id": 4316269,
     "name": "Varsity Baseball",
-    "sport": "Baseball",
-    "level": "Varsity",
-    "active": true
+    "sport": { "id": 31082, "name": "Baseball" }
   },
   {
-    "id": "bb-team-vsoccer-boys",
+    "id": 4316270,
     "name": "Varsity Soccer (Boys)",
-    "sport": "Soccer",
-    "level": "Varsity",
-    "active": true
+    "sport": { "id": 31083, "name": "Soccer" }
   }
 ]
