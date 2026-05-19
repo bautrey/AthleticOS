@@ -96,7 +96,11 @@ describe('Blockers Routes', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
+    // Clean up test data. Blocker creation goes through the service which calls
+    // notificationService.emit(), so notifications rows reference this school —
+    // delete those before the school to avoid an FK violation.
+    await prisma.notification.deleteMany({ where: { schoolId } });
+    await prisma.notificationPreference.deleteMany({ where: { schoolId } });
     await prisma.blocker.deleteMany({ where: { schoolId } });
     await prisma.facility.deleteMany({ where: { schoolId } });
     await prisma.team.deleteMany({ where: { schoolId } });
