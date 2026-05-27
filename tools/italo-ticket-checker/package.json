@@ -1,0 +1,23 @@
+{
+  "name": "italo-ticket-checker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Polls the Italo train booking site and notifies when tickets for a route/date become available.",
+  "bin": {
+    "italo-check": "src/index.ts"
+  },
+  "scripts": {
+    "check": "tsx src/index.ts --once",
+    "watch": "tsx src/index.ts --watch",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0",
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1"
+  }
+}

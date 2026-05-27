@@ -1,0 +1,5 @@
+node_modules/
+config.json
+.checker-state.json
+checker.log
+screenshots/

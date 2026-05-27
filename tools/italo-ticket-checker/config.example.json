@@ -1,0 +1,37 @@
+{
+  "search": {
+    "origin": "Firenze Santa Maria Novella",
+    "destination": "Roma Termini",
+    "departDate": "2026-08-10",
+    "passengers": { "adults": 1, "children": 0 },
+    "directUrl": null
+  },
+  "selectors": {
+    "originInput": "input[name='departureStation'], #departureStation",
+    "destinationInput": "input[name='arrivalStation'], #arrivalStation",
+    "autocompleteOption": ".ac-result, .autocomplete-item, li[role='option']",
+    "departDateInput": "input[name='departureDate'], #departureDate",
+    "searchButton": "button[type='submit'], button.search-cta",
+    "resultsContainer": ".train-solutions, [data-testid='solutions-list']",
+    "trainItem": ".train-solution, [data-testid='solution-row']",
+    "soldOutText": "Sold out"
+  },
+  "availability": {
+    "requireResultsContainer": true,
+    "minTrainItems": 1,
+    "availableIfTextPresent": [],
+    "unavailableIfTextPresent": ["Sold out", "No trains", "Esaurito", "Nessun treno"]
+  },
+  "notify": {
+    "console": true,
+    "logFile": "./checker.log",
+    "webhookUrl": null,
+    "webhookFormat": "slack"
+  },
+  "intervalMinutes": 30,
+  "headless": true,
+  "timeoutMs": 45000,
+  "stateFile": "./.checker-state.json",
+  "screenshotOnCheck": false,
+  "screenshotDir": "./screenshots"
+}
