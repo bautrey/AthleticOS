@@ -5,7 +5,7 @@ tickets become available. Drives a real Chromium browser (via Playwright) so
 the JavaScript booking app renders properly, and only alerts on the
 **transition** into "available" — so you won't get pinged every interval.
 
-Pre-configured for: **Firenze Santa Maria Novella → Roma Termini, 2026-08-10.**
+Pre-configured for: **Venezia Santa Lucia → Roma Termini, 2026-08-10.**
 
 ---
 
