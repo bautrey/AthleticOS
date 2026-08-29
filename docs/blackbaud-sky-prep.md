@@ -18,7 +18,7 @@ For Lisa Wong / Melissa Neatherlin -- everything you'll need to approve the Athl
 
 ## OAuth 2.0 redirect URI(s)
 
-Authorization-code flow. Please whitelist:
+Authorization-code flow. **Registered by AthleticOS on 2026-05-08 -- no action required from TCA.** Redirect URIs are app-level settings controlled by the app owner in the SKY developer portal; the school has no role in configuring them. Listed here for transparency only:
 
 - Production: `https://api.athleticos.co/auth/blackbaud/callback`
 - Local dev: `http://localhost:8003/auth/blackbaud/callback`
@@ -65,20 +65,25 @@ Per Melissa's confirmation (May 2026), TCA allows "SKY API Data Sync" for approv
 ## Handshake -- what's needed from each side
 
 **TCA / Blackbaud admin (Lisa or Melissa's team):**
-1. Approve AthleticOS in TCA's Blackbaud app marketplace / admin portal
-2. Assign the "Data Sync" role
-3. Confirm scopes above are acceptable
+1. Activate AthleticOS in the Applications area of the admin portal (Application ID `e060cf3f-d079-469b-824b-43e2f0b0dfca`). Admin-only action -- this is TCA's consent gate for third-party apps and cannot be delegated to AthleticOS.
+2. Create a service account for the integration with these three security groups: **SKY API Basic**, **SKY API Data Sync**, **Sky Reporting** -- plus read-only permissions on athletics and calendar, and nothing else. Hand the credentials to Burke.
+
+**Note on "scopes":** SKY API does *not* use per-API scopes. Their OIDC discovery document omits `scopes_supported`, and a token inherits the permissions of whoever authorizes it. So read-only is enforced by the authorizing account's permissions, not by anything AthleticOS requests. This is why the service account above must be read-only -- it is the actual guarantee.
 
 **AthleticOS (Burke):**
 1. ✅ Register the app at developer.blackbaud.com -- DONE 2026-05-08. Application ID: `e060cf3f-d079-469b-824b-43e2f0b0dfca`. Both redirect URIs registered.
 2. Implement `/auth/blackbaud/callback` endpoint (small task -- token storage in Render secrets)
-3. Obtain a SKY API subscription key (separate from the app -- needed in `Bb-Api-Subscription-Key` header on every request)
+3. ✅ Obtain a SKY API subscription key -- DONE 2026-07-01 via SKY API free developer tier (1,000 calls/day). Primary + secondary keys verified live against `/school/v1/years` and stored in macOS keychain (`blackbaud-sky-subscription-key`, `blackbaud-sky-subscription-key-secondary`, account `burkestudio`). Sent in the `Bb-Api-Subscription-Key` header on every request.
 4. Run OAuth flow with TCA admin account, store refresh token securely
 5. Build read-only sync first; demo to Beck/Truman before any write goes live
 
 ## Sandbox vs production
 
-Open question for Lisa/Melissa: does TCA have a Blackbaud sandbox environment, or do we go straight at production with a single test team? We'll respect whichever path you prefer.
+**Verified 2026-08-27:** Burke's own Blackbaud developer account has **no environment attached**. Running the authorization-code flow against the registered app returns *"You don't have access to any SKY API enabled Blackbaud products."* The app registration, subscription key, and scopes are all confirmed good -- the only missing piece is an environment to authorize against. `client_credentials` grant is not enabled for this app, so authorization-code is the only flow available.
+
+Consequence: we cannot build against our own sandbox today. Request pending with skyapi@blackbaud.com (draft: `email-blackbaud-sandbox-request.txt`) asking whether the SKY Developer Cohort covers Education Management (K-12), or whether a separate K-12 partner sandbox is required.
+
+Open question for Lisa/Melissa: does TCA have a Blackbaud sandbox environment, or do we go straight at production with a single test team? We'll respect whichever path you prefer. This is now the fallback if Blackbaud can't provide a K-12 developer environment.
 
 ## Audit + revocation
 

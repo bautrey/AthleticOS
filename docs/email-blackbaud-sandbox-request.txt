@@ -1,0 +1,44 @@
+Draft email - SKY Developer environment request
+
+To: skyapi@blackbaud.com
+Subject: Need environment access for registered SKY app e060cf3f-d079-469b-824b-43e2f0b0dfca (K-12 School API)
+
+
+Hi -
+
+I'm building an athletic operations app (AthleticOS) that integrates with Blackbaud Education Management for a K-12 private school.  I'm blocked at the last step and I think I just need an environment attached to my developer account.
+
+Where I am:
+
+- SKY app registered.  Application ID e060cf3f-d079-469b-824b-43e2f0b0dfca
+- Both redirect URIs registered (https://api.athleticos.co/auth/blackbaud/callback and http://localhost:8003/auth/blackbaud/callback)
+- Subscription key obtained via the free developer tier, and verified working (calls get past the subscription gate and fail only on the missing Authorization header, which is correct)
+- Scopes configured for full data access
+
+When I run the authorization-code flow, I get:
+
+    "You don't have access to any SKY API enabled Blackbaud products.
+     Please contact your organization's administrator."
+
+So the app is fine, the key is fine - my Blackbaud ID just isn't attached to any environment to authorize against.
+
+What I'm asking for:
+
+1. Access to a developer environment I can authorize against.  Does the SKY Developer Cohort include Education Management (K-12) School API data?  Everything I can find in the community about the Cohort refers to RENXT/FENXT, so I can't tell whether it covers what I need.
+
+2. If the Cohort doesn't cover K-12, is there a separate K-12 partner sandbox?  I've seen references to a sandbox that can mimic teachers and students, but not how to request one.
+
+The endpoints I need are all read-only to start:
+
+    /school/v1/calendars/...                      (master school calendar)
+    /school/v1/athletics/teams
+    /school/v1/athletics/teams/{id}/schedule
+    /school/v1/athletics/teams/{id}/roster
+
+One reason sandbox data specifically matters to us: the school's roster data is FERPA-protected, and their counsel approved our pilot on the condition that we work from de-identified or test data wherever possible.  A sandbox lets us build the entire integration without touching student PII at all.  If the only path is a live school environment, we can go that route with the school's admin, but I'd rather not put real student records in a development loop if I don't have to.
+
+Happy to send anything else you need.
+
+Thanks,
+Burke Autrey
+burke@autreymail.com

@@ -1,0 +1,76 @@
+To: Melissa Neatherlin, Lisa Wong
+Cc: Truman Blocker, Beck Brydon
+Subject: Signed pilot data request attached - plus the exact steps to grant read-only access
+
+
+Hi Melissa, Hi Lisa,
+
+Signed copy of the pilot data access request is attached.  Thank you both for moving this through.
+
+Below is everything you need on your side, as specific as I can make it.  If any of it doesn't match what you see in your admin portal, tell me and I'll adjust - I'm going off Blackbaud's published admin prerequisites, not off your actual configuration.
+
+
+HOW READ-ONLY ACTUALLY WORKS IN SKY - please read this part
+
+This is the one thing I want to be straight about, because it works differently than you'd expect.
+
+SKY API has no "read-only" permission you can hand out.  There is no scope to check, no box to tick.  A SKY access token inherits the permissions of whoever authorizes the connection.  If a full administrator clicks approve, the token can do everything that administrator can do - regardless of what our app intends.
+
+So read-only isn't something I can promise you with a setting.  It comes from WHO does the authorizing.
+
+What that means practically:
+
+- Our commitment: AthleticOS issues GET requests only during the pilot.  No POST, no PATCH, no DELETE.  Every call is logged with timestamp, endpoint, and response code, and I'll hand you that log any time you ask.
+- Your structural guarantee: have the OAuth authorization done by an account whose permissions are limited to reading athletics and calendar data.  Then the token is incapable of writing, no matter what.
+
+I'd rather you have the second one than take my word on the first.  If you'd like to create a limited service account for this, that's the cleanest path and I'm happy to work from whatever it can see.
+
+
+WHAT TO DO IN THE ADMIN PORTAL
+
+1. Roles on the authorizing account.  Blackbaud requires these three security groups for an account to authorize and maintain a connected app:
+
+       SKY API Basic
+       SKY API Data Sync
+       Sky Reporting
+
+   Add to those only the athletics/calendar read permissions the pilot needs.  Please do NOT use a full platform-manager account for the authorization step unless there's no alternative.
+
+2. Approve the app.  In the Applications area of the admin portal, activate AthleticOS.
+
+       Application name:  AthleticOS
+       Application ID:    e060cf3f-d079-469b-824b-43e2f0b0dfca
+
+3. Confirm the redirect URIs are whitelisted:
+
+       https://api.athleticos.co/auth/blackbaud/callback
+       http://localhost:8003/auth/blackbaud/callback
+
+4. Tell me which account will authorize, and I'll schedule the handshake with whoever holds it.  It takes about five minutes and has to be done by that person, not by me.
+
+
+WHAT WE WILL CALL
+
+Four endpoints, all GET, for the pilot team only:
+
+    /school/v1/calendars/...                    master school calendar (conflict detection)
+    /school/v1/athletics/teams
+    /school/v1/athletics/teams/{id}/schedule
+    /school/v1/athletics/teams/{id}/roster      early-release workflow
+
+Nothing touching financial data, advancement, the LMS, grades, or health records.  Write access is a separate conversation and I won't ask for it until you've seen Phase 1 running.
+
+
+HOW TO SHUT IT OFF
+
+Deactivate AthleticOS in the same Applications area.  Access stops immediately, and it requires no code change or cooperation from me.  That's by design - I want the off switch on your side of the table.
+
+
+ONE MORE THING, LISA
+
+I've asked Blackbaud directly for a developer sandbox so we can build against test data instead of TCA's live records.  If they come through, we may not need to touch real student data during the build at all, which is the outcome your team's condition was pointing at anyway.  I don't have an answer yet and I don't want to hold up the pilot waiting for one, so I'd suggest we proceed on the steps above and I'll switch to the sandbox if it materializes.
+
+Happy to get on a call and walk through any of this.
+
+Thanks,
+Burke
