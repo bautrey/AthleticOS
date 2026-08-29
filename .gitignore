@@ -52,6 +52,10 @@ prisma/*.db-journal
 
 # Local MCP config (machine-specific paths)
 .mcp.json
+.mcp.json.lock
+
+# Office lock/temp files (Word writes these next to open .docx)
+~$*
 
 # Local scratch — meeting transcripts, intermediate artifacts not meant for git
 docs/scratch/
