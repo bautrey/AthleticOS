@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Blackbaud SKY Grants Access</title>
+<style>
+  :root{
+    --ink:#1a1f26; --muted:#5b6672; --rule:#dfe4ea; --bg:#ffffff;
+    --accent:#1f5c8b; --accent-soft:#eef4f9;
+    --warn-bg:#fdf6e7; --warn-bd:#e3c477;
+    --ok:#1c6b3f; --amber:#8a6100; --red:#9c2c2c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:15px; line-height:1.5;
+  }
+  .wrap{max-width:860px; margin:0 auto; padding:28px 16px 40px}
+  header{border-bottom:2px solid var(--accent); padding-bottom:10px; margin-bottom:16px}
+  h1{font-size:21px; margin:0 0 4px; letter-spacing:-.01em}
+  .sub{color:var(--muted); font-size:13px; margin:0}
+  h2{font-size:14px; text-transform:uppercase; letter-spacing:.06em;
+     color:var(--accent); margin:20px 0 7px; font-weight:700}
+  p{margin:0 0 9px}
+  .lead{background:var(--accent-soft); border-left:3px solid var(--accent);
+        padding:11px 13px; border-radius:0 4px 4px 0; margin:0 0 4px}
+  .lead p{margin:0}
+  .lead p + p{margin-top:7px}
+  table{width:100%; border-collapse:collapse; margin:4px 0 6px; font-size:13.5px}
+  th,td{text-align:left; padding:6px 9px; border-bottom:1px solid var(--rule); vertical-align:top}
+  th{background:#f5f7f9; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  tbody tr:nth-child(even){background:#fafbfc}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px;
+       background:#f2f4f6; padding:1px 4px; border-radius:3px}
+  .analogy{background:var(--warn-bg); border:1px solid var(--warn-bd);
+           border-radius:5px; padding:11px 13px; margin:8px 0}
+  .analogy p{margin:0}
+  .analogy p + p{margin-top:6px}
+  .tag{display:inline-block; font-size:11px; font-weight:700; padding:1px 6px;
+       border-radius:3px; text-transform:uppercase; letter-spacing:.04em}
+  .t-ok{background:#e5f3ea; color:var(--ok)}
+  .t-mid{background:#fbf1dc; color:var(--amber)}
+  .t-hi{background:#f8e6e6; color:var(--red)}
+  ul{margin:4px 0 9px; padding-left:19px}
+  li{margin-bottom:3px}
+  .scroll{overflow-x:auto}
+  footer{margin-top:22px; padding-top:9px; border-top:1px solid var(--rule);
+         color:var(--muted); font-size:11.5px}
+  @media print{
+    body{font-size:8.9pt; line-height:1.34}
+    .wrap{padding:0; max-width:none}
+    header{padding-bottom:6px; margin-bottom:10px}
+    h1{font-size:14.5pt; margin-bottom:2px}
+    .sub{font-size:8.4pt}
+    h2{font-size:8.7pt; margin:8px 0 3px}
+    p{margin:0 0 5px}
+    .lead{padding:7px 10px}
+    .analogy{padding:7px 10px; margin:6px 0}
+    table{font-size:8.2pt; margin:2px 0 4px}
+    th,td{padding:3px 6px}
+    code{font-size:7.8pt}
+    ul{margin:2px 0 5px} li{margin-bottom:1px}
+    footer{margin-top:7px; padding-top:4px; font-size:7.3pt}
+    .lead,.analogy{break-inside:avoid}
+    tr{break-inside:avoid}
+  }
+  @page{margin:11mm}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>How Blackbaud SKY Grants Access</h1>
+  <p class="sub">Prepared for Melissa Neatherlin and Omar Peraza &nbsp;·&nbsp; Trinity Christian Academy &nbsp;·&nbsp; 3 September 2026</p>
+</header>
+
+<div class="lead">
+  <p><strong>The question:</strong> why does AthleticOS want a service account, when no prior app integration needed one?</p>
+  <p><strong>The short answer:</strong> a service account is how you give an integration <em>less</em> access than it would otherwise get. It is the smaller of the available options, not the larger one. This page explains why, so the choice is yours to make on the facts.</p>
+</div>
+
+<h2>SKY uses two credentials, and only one of them carries permissions</h2>
+<div class="scroll">
+<table>
+  <thead><tr><th style="width:23%">Credential</th><th style="width:31%">What it does</th><th>What it does NOT do</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Subscription key</strong><br><code>Bb-Api-Subscription-Key</code></td>
+      <td>Identifies the application to Blackbaud's gateway. Governs rate limits and daily quota.</td>
+      <td>Carries no permission to read any data. Tested directly: a valid key with no token returns <em>"The required Authorization header was missing."</em> The key alone reads nothing.</td>
+    </tr>
+    <tr>
+      <td><strong>OAuth access token</strong><br><code>Authorization: Bearer</code></td>
+      <td>Carries every data permission the integration has. Obtained only when a real person signs in to Blackbaud and approves the app.</td>
+      <td>Cannot be issued to an application on its own. There is no machine-to-machine path; SKY offers only the interactive sign-in flow.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2>There are no per-app scopes in SKY</h2>
+<p>Most modern APIs let you issue a key and attach scopes to it, for example <em>read schedules only</em>. SKY does not work that way. Blackbaud's own OAuth discovery document at <code>oauth2.sky.blackbaud.com</code> publishes <strong>no <code>scopes_supported</code> list at all</strong>, and its <code>response_types_supported</code> is <code>["code"]</code> alone, meaning an interactive human sign-in is the only route to a token.</p>
+<p>Because no scopes exist, the app cannot request narrower access and TCA cannot grant it per endpoint. <strong>A token's power is exactly whatever the person who approved it can do in Blackbaud.</strong></p>
+
+<div class="analogy">
+  <p><strong>Put another way:</strong> you are not issuing the app a badge that reads <em>"athletics schedules, read only."</em> No such badge exists. You are cloning a specific person's badge and handing the copy to the application.</p>
+  <p>Clone a limited account's badge, and the app opens only what that account opens. Clone an administrator's badge, and the app holds administrator capability for as long as the connection lives, whether or not it ever uses it.</p>
+</div>
+
+<h2>Three ways TCA can authorize AthleticOS</h2>
+<p>All three work. AthleticOS is content with any of them, and the differences are real, so the decision belongs to TCA.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th style="width:26%">Option</th><th style="width:18%">App receives</th><th>Trade-off</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>1. Read-only service account</strong><br><span class="tag t-ok">Least access</span></td>
+      <td>Read on athletics and calendar. Nothing else.</td>
+      <td>Writing is structurally impossible rather than merely promised. Activity stays separable from staff activity in the audit log, and the account can be disabled without affecting any person. Costs TCA the setup work, which is the real objection and a fair one.</td>
+    </tr>
+    <tr>
+      <td><strong>2. An existing limited account</strong><br><span class="tag t-ok">Least access</span></td>
+      <td>Whatever that account already holds.</td>
+      <td>Same benefit as option 1 with no new account to create, if a suitable non-admin account already exists.</td>
+    </tr>
+    <tr>
+      <td><strong>3. An administrator approves it</strong><br><span class="tag t-hi">Full admin access</span></td>
+      <td>Everything that administrator can do, including write and delete.</td>
+      <td>Simplest for TCA and identical to how prior integrations were approved. Read-only then rests on AthleticOS's commitment and the audit log rather than on the account itself.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p style="font-size:13px; color:var(--muted)">Note on the roles previously listed: <code>SKY API Basic</code> and <code>SKY API Data Sync</code> are what Blackbaud documents as required for an account to authorize and maintain a connected app. <code>Sky Reporting</code> was included in error, taken from a third-party setup guide and not confirmed as necessary for the endpoints below. Recommend starting with the minimum and adding only if a call actually fails.</p>
+
+<h2>What AthleticOS calls, and how to stop it</h2>
+<p>Four endpoints, all read, pilot team only: <code>calendars/…</code> (master calendar, for conflict detection), <code>athletics/teams</code>, <code>athletics/teams/{id}/schedule</code>, and <code>athletics/teams/{id}/roster</code> (early-release workflow), each under <code>/school/v1/</code>.</p>
+<p>No writes of any kind during the pilot. Every call is logged with timestamp, endpoint and response code, available to TCA on request. Nothing touching financial data, advancement, the LMS, grades or health records. <strong>To revoke:</strong> deactivate AthleticOS in the Applications area. Access stops immediately, with no code change and no cooperation needed from AthleticOS.</p>
+
+<footer>
+  AthleticOS &nbsp;·&nbsp; Application ID <code>e060cf3f-d079-469b-824b-43e2f0b0dfca</code> &nbsp;·&nbsp; Burke Autrey, burke@autreymail.com<br>
+  Claims about SKY behaviour on this page were verified against Blackbaud's live API and OAuth discovery endpoint on 3 September 2026.
+</footer>
+
+</div>
+</body>
+</html>
