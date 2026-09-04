@@ -77,6 +77,23 @@ Per Melissa's confirmation (May 2026), TCA allows "SKY API Data Sync" for approv
 4. Run OAuth flow with TCA admin account, store refresh token securely
 5. Build read-only sync first; demo to Beck/Truman before any write goes live
 
+## TCA environment (connected 2026-09-03)
+
+Blackbaud's "App connected notification" confirms AthleticOS is connected to TCA's live environment. Connected by Melissa Neatherlin.
+
+| Field | Value |
+|-------|-------|
+| Organization | Trinity Christian Academy |
+| Organization ID | `p-RnDtb5EC80CCFG6vCgEAQA` |
+| Environment | Trinity Christian Academy Environment |
+| Environment ID | `p-r2Qa2p0UVEy9WQc4d1ZaBA` |
+
+Use the Environment ID to confirm which tenant an access token belongs to -- the token response carries `environment_id`.
+
+Connected is NOT authorized. The app is trusted by the environment, but no token exists until a TCA user completes the OAuth sign-in. Which account does that is the open question with Melissa (see `blackbaud-access-model-onepager.pdf`).
+
+App environments page: https://developer.blackbaud.com/apps/appdetail/e060cf3f-d079-469b-824b-43e2f0b0dfca/environments
+
 ## Sandbox vs production
 
 **Verified 2026-08-27:** Burke's own Blackbaud developer account has **no environment attached**. Running the authorization-code flow against the registered app returns *"You don't have access to any SKY API enabled Blackbaud products."* The app registration, subscription key, and scopes are all confirmed good -- the only missing piece is an environment to authorize against. `client_credentials` grant is not enabled for this app, so authorization-code is the only flow available.
