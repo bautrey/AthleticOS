@@ -1,0 +1,47 @@
+Draft email - SKY Developer environment request, follow-up
+
+Reply on thread: "Need environment access for registered SKY app
+e060cf3f-d079-469b-824b-43e2f0b0dfca (K-12 School API)"
+Original sent 2026-08-28.  Auto-reply promised 5 business days (expired 2026-09-04).
+
+To: skyapi@blackbaud.com
+Subject: Re: Need environment access for registered SKY app e060cf3f-d079-469b-824b-43e2f0b0dfca (K-12 School API)
+
+
+Hi -
+
+Following up on the note below from August 28.  The auto-reply said 5 business
+days and we're past that, so I want to make sure it didn't fall through.
+
+One thing has changed since I wrote.  The school completed their side.  Trinity
+Christian Academy connected AthleticOS to their live environment on September 3.
+
+    Organization ID    p-RnDtb5EC80CCFG6vCgEAQA
+    Environment ID     p-r2Qa2p0UVEy9WQc4d1ZaBA
+
+So this is a real Education Management customer with an approved integration,
+not a hypothetical.  Their IT team is still building the read-only service
+account on their end, which is exactly why I'm asking for somewhere else to
+build in the meantime.
+
+The ask is the same and it's small:
+
+1. Can you attach a developer environment to my Blackbaud ID so I can run the
+   authorization-code flow?  Does the SKY Developer Cohort cover Education
+   Management (K-12), or is it RENXT/FENXT only?  Everything I can find in the
+   community refers to RENXT/FENXT.
+
+2. If there's no K-12 developer environment, just tell me that.  A clear NO is
+   genuinely useful - I'll go straight at the school's production environment
+   with a single test team and stop waiting on this.
+
+The reason I'd rather not do that: the roster data is FERPA-protected, and the
+school's counsel approved our pilot on the condition that we work from
+de-identified or test data wherever we can.  A sandbox lets me build the whole
+integration without touching a student record.
+
+App ID is e060cf3f-d079-469b-824b-43e2f0b0dfca.  Happy to send anything else
+you need.
+
+Thanks,
+Burke

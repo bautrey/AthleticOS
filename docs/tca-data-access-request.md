@@ -4,10 +4,21 @@ title: "Request for Evaluation Data Access — AthleticOS Pilot"
 
 # Request for Evaluation Data Access — AthleticOS Pilot
 
-**To:** Trinity Christian Academy — Office of the Head of School / Legal Counsel *[confirm recipient name & title]*
+---
+
+> **Status: executed.** Sent to TCA on 2026-07-24. Signed by Lisa Wong
+> (Chief Innovation Officer) and returned 2026-08-25; the fully-executed copy was
+> circulated 2026-08-29. The authoritative signed instrument is the PDF attached to
+> Lisa Wong's 2026-08-25 email, not this file. This markdown is the source text with
+> the bracketed fields resolved from the email record — it is kept for reference and
+> should not be re-sent or re-signed.
+
+---
+
+**To:** Lisa Wong, Chief Innovation Officer, Trinity Christian Academy
 **Cc:** Lisa Wong; Melissa Neatherlin
 **From:** Burke Autrey and Truman Blocker (individually)
-**Date:** *[date]*
+**Date:** July 24, 2026
 **Re:** Request to approve a limited, no-cost evaluation pilot of AthleticOS using a defined subset of TCA athletic data, under a mutual non-disclosure agreement
 
 ---
@@ -33,7 +44,7 @@ AthleticOS is an early-stage athletic-operations tool being built by two individ
 | Principal | Role | Contact |
 |-----------|------|---------|
 | Burke Autrey | Technical lead, data steward | burke@autreymail.com |
-| Truman Blocker | Product / athletics domain | *[Truman's email]* |
+| Truman Blocker | Product / athletics domain | tblocker@trinitychristian.org |
 
 In the interest of full transparency: **AthleticOS is not yet incorporated and does not operate under a DBA.** We are presenting to TCA as two named individuals, and we will sign the NDA and any related agreement **personally**. We would rather be candid about our stage than overstate a corporate structure that does not yet exist.
 
@@ -111,11 +122,11 @@ A fuller *Data Handling & Security Brief* is available (and already shared with 
 | Item | Commitment |
 |------|-----------|
 | Cost to TCA | **$0** — no fee, no purchase obligation |
-| Term | **90 days** *[adjust]* from access grant, renewable only by mutual agreement |
+| Term | **90 days** from access grant, renewable only by mutual agreement |
 | Scope | Single sport/team, read-only |
 | Revocation | Instant, at TCA's sole discretion, via Blackbaud admin portal |
 | Data return/deletion | Full export (CSV/JSON) and deletion within 30 days of request or pilot end |
-| Governing law | State of Texas *[confirm]* |
+| Governing law | State of Texas |
 
 ---
 

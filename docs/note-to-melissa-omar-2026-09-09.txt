@@ -1,0 +1,38 @@
+Draft email - schedule the TCA access call
+
+Reply on thread: "FW: Athletics OS Pilot"
+Melissa asked on 2026-09-04 to connect "next week."  This is that week.
+
+To:  mneatherlin@trinitychristian.org, OPeraza@trinitychristian.org
+Cc:  lwong@trinitychristian.org, tblocker@trinitychristian.org
+Subject: Re: FW: Athletics OS Pilot
+
+ATTACH: docs/blackbaud-access-model-onepager.pdf
+
+
+Melissa, Omar -
+
+Thanks for connecting the app on the 3rd, Melissa.  That half is done on
+Blackbaud's side and I can see the environment.
+
+Following up on getting together this week.  I'm open Thursday 9/10 after 9am,
+or Friday 9/11 before 11am or after 2pm.  Send whatever works and I'll get it on
+the calendar.
+
+It should be a short call.  There's really one decision on the table: which
+account AthleticOS authorizes as.  I've attached the one-pager on that.  The
+short version is that SKY API has no per-app permission scopes - a token
+inherits whatever the authorizing account can do.  So a read-only service
+account isn't me being polite about least privilege, it's the ONLY thing that
+makes the integration structurally unable to change anything in your system.
+
+Omar - good to meet you.  If it's easier to just do it than to meet about it,
+the entire ask is one account with three security groups (SKY API Basic, SKY API
+Data Sync, Sky Reporting), read-only on athletics and calendar, nothing else.
+Send me the login and I'll handle the OAuth setup and everything downstream.
+
+And if you're still buried, say so and I'll leave you alone until you're ready.
+I'd rather know than guess.
+
+Thanks,
+Burke

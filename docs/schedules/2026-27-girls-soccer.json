@@ -1,0 +1,285 @@
+{
+  "source": {
+    "provided_by": "Truman Blocker (assistant coach)",
+    "received": "2026-09-04T05:12:23Z",
+    "channel": "email, pasted inline",
+    "schedule_updated_by_school": "2026-09-03",
+    "note": "Transcribed verbatim. No times, opponents, or locations were inferred."
+  },
+  "team": {
+    "school": "Trinity Christian Academy",
+    "program": "Upper School Soccer - Girls",
+    "levels": [
+      "JV",
+      "Varsity"
+    ],
+    "season": "2026/2027",
+    "gender": "girls"
+  },
+  "offseason_training": {
+    "starts": "2026-09-08",
+    "days": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu"
+    ],
+    "start_time": "16:15",
+    "end_time": "17:30",
+    "through": "October 2026",
+    "end_date_exact": null,
+    "source_text": "Beginning Tuesday Sept 8th we will train Monday through Thursday from 4:15-5:30 for September and October."
+  },
+  "blackouts": [
+    {
+      "name": "Discovery Week",
+      "start": "2027-02-01",
+      "end": "2027-02-05",
+      "source_text": "February 1st thru 5th DISCOVERY WEEK"
+    }
+  ],
+  "events": [
+    {
+      "date": "2026-11-05",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "Prestonwood @ TCA (JV vs. Storm)",
+      "kind": "game",
+      "home_away": "Home",
+      "opponent": "Prestonwood",
+      "tentative": false
+    },
+    {
+      "date": "2026-11-09",
+      "stated_day": "Mon",
+      "calendar_day": "Mon",
+      "start_time": null,
+      "source_text": "Covenant (JV?) @ TCA",
+      "kind": "game",
+      "home_away": "Home",
+      "opponent": "Covenant",
+      "tentative": false
+    },
+    {
+      "date": "2026-11-12",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "Ursuline JV + V @ TCA",
+      "kind": "game",
+      "home_away": "Home",
+      "opponent": "Ursuline",
+      "tentative": false
+    },
+    {
+      "date": "2026-11-16",
+      "stated_day": "Mon",
+      "calendar_day": "Mon",
+      "start_time": null,
+      "source_text": "Away Date Available",
+      "kind": "open_date",
+      "home_away": "Away",
+      "opponent": null,
+      "tentative": false
+    },
+    {
+      "date": "2026-11-19",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "TCA (JV?) @ Covenant",
+      "kind": "game",
+      "home_away": "Away",
+      "opponent": "Covenant",
+      "tentative": false
+    },
+    {
+      "date": "2026-12-01",
+      "stated_day": "Tue",
+      "calendar_day": "Tue",
+      "start_time": null,
+      "source_text": "Greenhill @ TCA",
+      "kind": "game",
+      "home_away": "Home",
+      "opponent": "Greenhill",
+      "tentative": false
+    },
+    {
+      "date": "2026-12-03",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "Tyler Tournament Game 1 - Latest Slot Evening",
+      "kind": "tournament",
+      "home_away": "Away",
+      "opponent": null,
+      "tentative": false
+    },
+    {
+      "date": "2026-12-04",
+      "stated_day": "Fri",
+      "calendar_day": "Fri",
+      "start_time": null,
+      "source_text": "Tyler Tournament GAME 2 - GAME 3 TBD",
+      "kind": "tournament",
+      "home_away": "Away",
+      "opponent": null,
+      "tentative": true
+    },
+    {
+      "date": "2026-12-05",
+      "stated_day": "Sat",
+      "calendar_day": "Sat",
+      "start_time": null,
+      "source_text": "Tyler Tournament Game 4 Earliest slot",
+      "kind": "tournament",
+      "home_away": "Away",
+      "opponent": null,
+      "tentative": false
+    },
+    {
+      "date": "2026-12-08",
+      "stated_day": "Tue",
+      "calendar_day": "Tue",
+      "start_time": null,
+      "source_text": "(ESD TBD)",
+      "kind": "game",
+      "home_away": null,
+      "opponent": "ESD TBD",
+      "tentative": true
+    },
+    {
+      "date": "2026-12-10",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "HSAA JV + V @ TCA",
+      "kind": "game",
+      "home_away": "Home",
+      "opponent": "HSAA",
+      "tentative": false
+    },
+    {
+      "date": "2026-12-14",
+      "stated_day": "Mon",
+      "calendar_day": "Mon",
+      "start_time": null,
+      "source_text": "TCA @ Prestonwood",
+      "kind": "game",
+      "home_away": "Away",
+      "opponent": "Prestonwood",
+      "tentative": false
+    },
+    {
+      "date": "2027-01-04",
+      "stated_day": "Mon",
+      "calendar_day": "Mon",
+      "start_time": null,
+      "source_text": "(JPII ? @ TCA)",
+      "kind": "game",
+      "home_away": "Home",
+      "opponent": "JPII",
+      "tentative": true
+    },
+    {
+      "date": "2027-01-07",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "Home Date Available",
+      "kind": "open_date",
+      "home_away": "Home",
+      "opponent": null,
+      "tentative": false
+    },
+    {
+      "date": "2027-01-12",
+      "stated_day": "Tue",
+      "calendar_day": "Tue",
+      "start_time": null,
+      "source_text": "TCA JV + V @ STORM",
+      "kind": "game",
+      "home_away": "Away",
+      "opponent": "STORM",
+      "tentative": false
+    },
+    {
+      "date": "2027-01-14",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "TCA ? @ Greenhill",
+      "kind": "game",
+      "home_away": "Away",
+      "opponent": "Greenhill",
+      "tentative": false
+    },
+    {
+      "date": "2027-01-21",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "DISTRICT GAME 1 - TCA @ NOLAN",
+      "kind": "district_game",
+      "home_away": "Away",
+      "opponent": "NOLAN",
+      "tentative": false
+    },
+    {
+      "date": "2027-01-25",
+      "stated_day": "Mon",
+      "calendar_day": "Mon",
+      "start_time": null,
+      "source_text": "DISTRICT GAME 2 - LIBERTY @ TCA",
+      "kind": "district_game",
+      "home_away": "Home",
+      "opponent": "LIBERTY",
+      "tentative": false
+    },
+    {
+      "date": "2027-01-28",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "DISTRICT GAME 3 - PARISH @ TCA",
+      "kind": "district_game",
+      "home_away": "Home",
+      "opponent": "PARISH",
+      "tentative": false
+    },
+    {
+      "date": "2027-02-08",
+      "stated_day": "Mon",
+      "calendar_day": "Mon",
+      "start_time": null,
+      "source_text": "DISTRICT GAME 4 - TCA @ PARISH",
+      "kind": "district_game",
+      "home_away": "Away",
+      "opponent": "PARISH",
+      "tentative": false
+    },
+    {
+      "date": "2027-02-11",
+      "stated_day": "Thu",
+      "calendar_day": "Thu",
+      "start_time": null,
+      "source_text": "DISTRICT GAME 5 - TCA @ LIBERTY",
+      "kind": "district_game",
+      "home_away": "Away",
+      "opponent": "LIBERTY",
+      "tentative": false
+    },
+    {
+      "date": "2027-02-16",
+      "stated_day": "Tue",
+      "calendar_day": "Tue",
+      "start_time": null,
+      "source_text": "DISTRICT GAME 6 - NOLAN @ TCA",
+      "kind": "district_game",
+      "home_away": "Home",
+      "opponent": "NOLAN",
+      "tentative": false
+    }
+  ]
+}
