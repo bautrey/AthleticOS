@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { ConflictsList } from '../components/conflicts/ConflictsList';
+import { FacilityConflictsList } from '../components/conflicts/FacilityConflictsList';
 import { BatchActionsBar } from '../components/conflicts/BatchActionsBar';
 import { useConflictList } from '../hooks/useConflicts';
 import type { BlockerType, ConflictListQuery } from '../api/conflicts';
@@ -25,6 +26,9 @@ export function ConflictsPage() {
     sortBy: 'datetime',
     sortOrder: 'asc',
     includeSuggestions: true,
+    // Facility double-bookings show unless someone narrows the filter. Defaulting
+    // to blockers-only hid a check that was already running.
+    types: 'blocker,facility',
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeDetailIndex, setActiveDetailIndex] = useState<number | null>(null);
@@ -89,12 +93,26 @@ export function ConflictsPage() {
             </div>
             <div className="text-sm text-gray-500">Total Conflicts</div>
           </div>
-          {Object.entries(data.summary.byBlockerType).slice(0, 3).map(([type, count]) => (
-            <div key={type} className="bg-white rounded-lg shadow p-4">
-              <div className="text-2xl font-semibold text-gray-900">{count}</div>
-              <div className="text-sm text-gray-500">{type.replace('_', ' ')}</div>
+          {data.summary.facilityConflictCount !== undefined && (
+            <div className="bg-white rounded-lg shadow p-4">
+              <div
+                className={`text-2xl font-semibold ${
+                  data.summary.facilityConflictCount > 0 ? 'text-red-600' : 'text-green-600'
+                }`}
+              >
+                {data.summary.facilityConflictCount}
+              </div>
+              <div className="text-sm text-gray-500">Double-Bookings</div>
             </div>
-          ))}
+          )}
+          {Object.entries(data.summary.byBlockerType)
+            .slice(0, data.summary.facilityConflictCount !== undefined ? 2 : 3)
+            .map(([type, count]) => (
+              <div key={type} className="bg-white rounded-lg shadow p-4">
+                <div className="text-2xl font-semibold text-gray-900">{count}</div>
+                <div className="text-sm text-gray-500">{type.replace('_', ' ')}</div>
+              </div>
+            ))}
         </div>
       )}
 
@@ -141,6 +159,10 @@ export function ConflictsPage() {
           <option value="desc">Latest First</option>
         </select>
       </div>
+
+      {/* Facility double-bookings: event-vs-event, so they render above the
+          blocker list rather than inside it. */}
+      {!isLoading && <FacilityConflictsList items={data?.facilityConflicts ?? []} />}
 
       {/* Conflicts List */}
       <div className={`bg-white rounded-lg shadow ${selectedIds.size > 0 ? 'pb-16' : ''}`}>

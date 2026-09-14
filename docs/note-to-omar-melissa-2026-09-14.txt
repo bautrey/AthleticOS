@@ -1,0 +1,56 @@
+Draft email - reply to Omar's access-options table
+
+Reply on thread: "FW: Athletics OS Pilot" (msg 1a0a1b050e86b98e, Omar, 2026-09-14)
+Omar sent a 5-option table and said: "If go by the path of an integration account,
+we will need to discuss security measures. We currently do not have this type of
+account for vendors accessing Blackbaud." He is available to talk Tue 9/15.
+
+To:  OPeraza@trinitychristian.org, mneatherlin@trinitychristian.org
+Cc:  lwong@trinitychristian.org, tblocker@trinitychristian.org
+Subject: RE: FW: Athletics OS Pilot
+
+
+Omar, Melissa -
+
+Tomorrow works.  I'm open after 9am, or anytime in the afternoon except 1-2.  Send
+an invite for whatever suits you and I'll be there.
+
+Omar - thank you for the table.  That's a more thorough answer than I asked for and
+it makes the conversation easier.
+
+I agree with where you landed.  The integration account row is the one that fits
+what Beck and Truman are asking us to solve, and I'd add that it's also the option
+that keeps the least of your data on our side.  The export and reporting rows sound
+like the conservative choice, but they'd put student and schedule files at rest on
+our infrastructure that we'd then have to encrypt, retain and destroy.  A read-only
+connection holds none of that.
+
+Two things I want to be clear about, because I think both of them help you.
+
+The ask is smaller than what I sent on the 29th.  To start we need read access to
+the school calendar, athletics teams, and team schedules.  We do NOT need rosters in
+this phase, which takes student records out of the picture for now.  No write access
+to anything.
+
+It does need to be a live connection rather than a periodic export.  The question
+we're actually trying to answer is whether this can do the job day to day, and a
+snapshot can't tell us that.  Schedules move.  The conflicts worth catching are the
+ones that show up when something changes on a Tuesday afternoon.
+
+On the account itself - I know you don't have one of these yet and I don't want to
+hand you a problem.  Things I'll bring tomorrow so you're not working them out on
+the spot: how the credential is stored on our end, rotation, what revokes it, what
+our logging looks like, and what happens to all of it when the pilot ends.  One I'd
+raise now because it's the awkward one - if TCA requires MFA on every account, an
+automated connection needs either an exception or a different mechanism.  Better
+five minutes tomorrow than a surprise later.
+
+Worth saying plainly: we're not trying to replace Blackbaud.  What we're aiming at
+is the mess Truman keeps hitting on facilities and field space.  If anything this
+should reduce what Blackbaud has to carry for athletics.
+
+Lisa - copying you since you signed the pilot agreement, so you can see where things
+stand.
+
+Thanks,
+Burke

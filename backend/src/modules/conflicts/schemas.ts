@@ -28,8 +28,39 @@ export const conflictsListQueryWithSuggestionsSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
   includeSuggestions: z.coerce.boolean().optional().default(false),
   // T-028: Filter by conflict types (comma-separated: blocker, facility, all)
-  types: z.string().optional().default('blocker'),
+  // Facility double-bookings are included by default. Two teams on the same field
+  // at the same time is the conflict schools actually hit; leaving it opt-in meant
+  // the detection ran only for callers who already knew to ask for it.
+  types: z.string().optional().default('blocker,facility'),
 });
+
+/**
+ * Parse the comma-separated `types` query param into a set of enabled checks.
+ *
+ * Tolerates whitespace, casing, empty segments and a trailing comma, because this
+ * value is hand-assembled in query strings. An empty or all-garbage value falls
+ * back to the default rather than silently disabling every check.
+ */
+export function parseConflictTypes(raw: string | undefined): {
+  blocker: boolean;
+  facility: boolean;
+} {
+  const parts = (raw ?? '')
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+
+  const known = parts.filter((p) => p === 'blocker' || p === 'facility' || p === 'all');
+  if (known.length === 0) {
+    return { blocker: true, facility: true };
+  }
+
+  const all = known.includes('all');
+  return {
+    blocker: all || known.includes('blocker'),
+    facility: all || known.includes('facility'),
+  };
+}
 
 export type ConflictsListQuery = z.infer<typeof conflictsListQuerySchema>;
 

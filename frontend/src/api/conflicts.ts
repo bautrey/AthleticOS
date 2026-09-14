@@ -77,7 +77,16 @@ export interface ConflictListItem {
 export interface ConflictListResponse {
   data: ConflictListItem[];
   meta: { page: number; limit: number; total: number; totalPages: number };
-  summary: { total: number; byBlockerType: Record<string, number> };
+  summary: {
+    total: number;
+    byBlockerType: Record<string, number>;
+    // Present when the request asked for facility checks.
+    facilityConflictCount?: number;
+  };
+  // Two events booked into the same facility at overlapping times. Returned
+  // alongside `data` rather than inside it, because these are event-vs-event
+  // rather than event-vs-blocker and carry a second event instead of a blocker.
+  facilityConflicts?: TypedConflict[];
 }
 
 export interface ConflictSuggestion {

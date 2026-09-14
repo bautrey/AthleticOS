@@ -2,7 +2,7 @@
 import type { FastifyInstance } from 'fastify';
 import { authenticate, requireRole, STAFF, ALL_INTERNAL } from '../../common/middleware/auth.js';
 import { prisma } from '../../common/db.js';
-import { createOverrideSchema, conflictsListQueryWithSuggestionsSchema, batchOverrideSchema, checkConflictsSchema, suggestSlotsSchema, applySlotSchema } from './schemas.js';
+import { createOverrideSchema, conflictsListQueryWithSuggestionsSchema, batchOverrideSchema, checkConflictsSchema, suggestSlotsSchema, applySlotSchema, parseConflictTypes } from './schemas.js';
 import { conflictService } from './service.js';
 
 export async function conflictsRoutes(app: FastifyInstance) {
@@ -44,14 +44,21 @@ export async function conflictsRoutes(app: FastifyInstance) {
     const { schoolId } = request.params as { schoolId: string };
     const query = conflictsListQueryWithSuggestionsSchema.parse(request.query);
 
-    // Get the base blocker-based conflicts list
-    const result = await conflictService.listAllConflicts(schoolId, query);
+    // T-028: 'types' selects which checks run. Both are on unless narrowed.
+    const types = parseConflictTypes(query.types);
 
-    // T-028: If types includes 'facility' or 'all', merge facility conflicts
-    const typesStr = query.types ?? 'blocker';
-    const types = typesStr.split(',').map(t => t.trim().toLowerCase());
+    // Get the base blocker-based conflicts list. Narrowing to facility-only used
+    // to still return every blocker conflict in `data`, so the filter appeared to
+    // do nothing.
+    const result = types.blocker
+      ? await conflictService.listAllConflicts(schoolId, query)
+      : {
+          data: [],
+          meta: { page: query.page, limit: query.limit, total: 0, totalPages: 0 },
+          summary: { total: 0, byBlockerType: {} as Record<string, number> },
+        };
 
-    if (types.includes('facility') || types.includes('all')) {
+    if (types.facility) {
       // Determine date range from existing conflicts or default to 90 days
       const now = new Date();
       const ninetyDaysOut = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
