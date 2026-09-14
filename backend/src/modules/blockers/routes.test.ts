@@ -96,7 +96,11 @@ describe('Blockers Routes', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
+    // Clean up test data.
+    // Creating and updating blockers emits notifications, and Notification holds a
+    // non-cascading school_id, so these have to go before the school does or
+    // school.delete fails on notifications_school_id_fkey.
+    await prisma.notification.deleteMany({ where: { schoolId } });
     await prisma.blocker.deleteMany({ where: { schoolId } });
     await prisma.facility.deleteMany({ where: { schoolId } });
     await prisma.team.deleteMany({ where: { schoolId } });

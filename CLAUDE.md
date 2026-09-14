@@ -26,7 +26,7 @@ docker compose up
 
 | Service | Internal | External |
 |---------|----------|----------|
-| Database | 5432 | 5434 |
+| Database | 5432 | 5437 |
 | API | 8000 | 8003 |
 | Frontend | 3000 | 3005 |
 
