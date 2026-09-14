@@ -3,6 +3,7 @@ import { BlockerScope, BlockerType, EventType, Blocker } from '@prisma/client';
 import { prisma } from '../../common/db.js';
 import { NotFoundError } from '../../common/errors.js';
 import { priorityRuleService } from '../priority-rules/service.js';
+import { resolveGameDurationMinutes } from './schemas.js';
 
 // ============ Interfaces ============
 
@@ -739,7 +740,8 @@ export const conflictService = {
     dateRange: { start: Date; end: Date }
   ): Promise<TypedConflict[]> {
     // Query all games and practices in date range for this school that have a facility assigned
-    const [games, practices] = await Promise.all([
+    const [school, games, practices] = await Promise.all([
+      prisma.school.findUnique({ where: { id: schoolId }, select: { settings: true } }),
       prisma.game.findMany({
         where: {
           season: { team: { schoolId } },
@@ -778,6 +780,10 @@ export const conflictService = {
 
     const allEvents: NormalizedEvent[] = [];
 
+    // Game has no end time, so its facility footprint is assumed. Schools can set
+    // gameDurationMinutes in settings rather than living with a two-hour guess.
+    const gameDurationMs = resolveGameDurationMinutes(school?.settings) * 60000;
+
     for (const game of games) {
       if (!game.facilityId) continue;
       allEvents.push({
@@ -785,7 +791,7 @@ export const conflictService = {
         type: 'GAME',
         name: `Game vs ${game.opponent}`,
         datetime: game.datetime,
-        endTime: new Date(game.datetime.getTime() + 120 * 60000), // 2 hours default
+        endTime: new Date(game.datetime.getTime() + gameDurationMs),
         facilityId: game.facilityId,
         facilityName: game.facility?.name ?? 'Unknown',
         teamName: game.season.team.name,

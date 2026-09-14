@@ -10,6 +10,28 @@ export const createOverrideSchema = z.object({
 
 export type CreateOverrideInput = z.infer<typeof createOverrideSchema>;
 
+/** Fallback game length when a school has not set one. */
+export const DEFAULT_GAME_DURATION_MINUTES = 120;
+
+/**
+ * How long a game occupies its facility, in minutes.
+ *
+ * `Game` has a start time and no end time, so double-booking detection has to
+ * assume a length. Two hours suits a basketball or football game and badly
+ * overstates a swim meet heat or a JV half, which produces phantom conflicts on
+ * the back half of the window. Schools can set `gameDurationMinutes` in
+ * `School.settings` until `Game` carries a real duration.
+ */
+export function resolveGameDurationMinutes(settings: unknown): number {
+  if (settings && typeof settings === 'object' && !Array.isArray(settings)) {
+    const raw = (settings as Record<string, unknown>).gameDurationMinutes;
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 15 && raw <= 480) {
+      return raw;
+    }
+  }
+  return DEFAULT_GAME_DURATION_MINUTES;
+}
+
 export const conflictsListQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(25),

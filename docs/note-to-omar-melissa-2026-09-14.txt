@@ -10,47 +10,44 @@ Cc:  lwong@trinitychristian.org, tblocker@trinitychristian.org
 Subject: RE: FW: Athletics OS Pilot
 
 
-Omar, Melissa -
+Omar/Melissa -
 
-Tomorrow works.  I'm open after 9am, or anytime in the afternoon except 1-2.  Send
-an invite for whatever suits you and I'll be there.
+Tomorrow works.  I'm open after 9am, or in the afternoon except 1-2.  Send an
+invite for whatever is easiest and I'll be there.
 
-Omar - thank you for the table.  That's a more thorough answer than I asked for and
-it makes the conversation easier.
+Omar - thanks for putting that table together.  That's more homework than I
+expected and it helps.
 
-I agree with where you landed.  The integration account row is the one that fits
-what Beck and Truman are asking us to solve, and I'd add that it's also the option
-that keeps the least of your data on our side.  The export and reporting rows sound
-like the conservative choice, but they'd put student and schedule files at rest on
-our infrastructure that we'd then have to encrypt, retain and destroy.  A read-only
-connection holds none of that.
+I think you landed in the right place.  The integration account is the one that
+fits what Beck and Truman are after.  One thing in its favor that might not be
+obvious - it keeps less of your data on our side than the export options do.  With
+exports we end up holding student and schedule files that we then have to protect
+and delete.  With a read-only connection we aren't holding any of it.
 
-Two things I want to be clear about, because I think both of them help you.
+Two things that should make this easier on you.
 
-The ask is smaller than what I sent on the 29th.  To start we need read access to
-the school calendar, athletics teams, and team schedules.  We do NOT need rosters in
-this phase, which takes student records out of the picture for now.  No write access
-to anything.
+First, I need less than what I asked for on the 29th.  To start it's read access to
+the school calendar, athletics teams, and team schedules.  We don't need rosters
+yet, so no student records.  And no write access at all.
 
-It does need to be a live connection rather than a periodic export.  The question
-we're actually trying to answer is whether this can do the job day to day, and a
-snapshot can't tell us that.  Schedules move.  The conflicts worth catching are the
-ones that show up when something changes on a Tuesday afternoon.
+Second, it does need to be a live connection and not a periodic export.  We're
+trying to find out whether this works day to day and a one-time file can't tell us
+that.  Schedules change all week and the conflicts we're looking for are the ones
+that show up after something moves.
 
 On the account itself - I know you don't have one of these yet and I don't want to
-hand you a problem.  Things I'll bring tomorrow so you're not working them out on
-the spot: how the credential is stored on our end, rotation, what revokes it, what
-our logging looks like, and what happens to all of it when the pilot ends.  One I'd
-raise now because it's the awkward one - if TCA requires MFA on every account, an
-automated connection needs either an exception or a different mechanism.  Better
-five minutes tomorrow than a surprise later.
+hand you a problem.  I'll come tomorrow with how we store the credential, how it
+gets rotated, how you kill it, what we log, and what happens to all of it when the
+pilot ends.  One I'd rather bring up now than run into later - if TCA requires MFA
+on every account, an automated connection needs an exception or a different
+approach.  Worth five minutes tomorrow.
 
-Worth saying plainly: we're not trying to replace Blackbaud.  What we're aiming at
-is the mess Truman keeps hitting on facilities and field space.  If anything this
-should reduce what Blackbaud has to carry for athletics.
+And just so it's clear, we aren't trying to replace Blackbaud.  What we're going
+after is the facilities and field space mess Truman keeps running into.  If
+anything this takes some load off Blackbaud.
 
-Lisa - copying you since you signed the pilot agreement, so you can see where things
-stand.
+Lisa - copying you since you signed the pilot agreement, so you can see where we
+are.
 
 Thanks,
 Burke

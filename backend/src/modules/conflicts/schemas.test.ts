@@ -4,7 +4,12 @@
 // whether facility double-booking detection runs at all for a request.
 
 import { describe, it, expect } from 'vitest';
-import { parseConflictTypes, conflictsListQueryWithSuggestionsSchema } from './schemas.js';
+import {
+  parseConflictTypes,
+  conflictsListQueryWithSuggestionsSchema,
+  resolveGameDurationMinutes,
+  DEFAULT_GAME_DURATION_MINUTES,
+} from './schemas.js';
 
 describe('parseConflictTypes', () => {
   it('runs both checks when the caller says nothing', () => {
@@ -40,6 +45,33 @@ describe('parseConflictTypes', () => {
 
   it('ignores an unknown check alongside a known one', () => {
     expect(parseConflictTypes('facility,person')).toEqual({ blocker: false, facility: true });
+  });
+});
+
+describe('resolveGameDurationMinutes', () => {
+  it('falls back to two hours when the school has set nothing', () => {
+    expect(resolveGameDurationMinutes({})).toBe(DEFAULT_GAME_DURATION_MINUTES);
+    expect(resolveGameDurationMinutes(null)).toBe(DEFAULT_GAME_DURATION_MINUTES);
+    expect(resolveGameDurationMinutes(undefined)).toBe(DEFAULT_GAME_DURATION_MINUTES);
+  });
+
+  it('uses the school\'s value when set', () => {
+    expect(resolveGameDurationMinutes({ gameDurationMinutes: 75 })).toBe(75);
+  });
+
+  it('ignores values outside a plausible game length', () => {
+    // A zero or negative duration would collapse every game to a point and hide
+    // real double-bookings; an absurd one would flag the whole season.
+    expect(resolveGameDurationMinutes({ gameDurationMinutes: 0 })).toBe(120);
+    expect(resolveGameDurationMinutes({ gameDurationMinutes: -30 })).toBe(120);
+    expect(resolveGameDurationMinutes({ gameDurationMinutes: 10000 })).toBe(120);
+  });
+
+  it('ignores a value of the wrong type', () => {
+    expect(resolveGameDurationMinutes({ gameDurationMinutes: '90' })).toBe(120);
+    expect(resolveGameDurationMinutes({ gameDurationMinutes: NaN })).toBe(120);
+    expect(resolveGameDurationMinutes('not an object')).toBe(120);
+    expect(resolveGameDurationMinutes([90])).toBe(120);
   });
 });
 
