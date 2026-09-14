@@ -42,6 +42,23 @@ pilot ends.  One I'd rather bring up now than run into later - if TCA requires M
 on every account, an automated connection needs an exception or a different
 approach.  Worth five minutes tomorrow.
 
+One more thing, and I'm raising it now because I don't think it has come up yet.
+
+What I described above gets us the space problems.  Two teams on the same field, or
+a game that lands on top of something already on the school calendar.  What it won't
+do is tell you that moving the choir concert from Thursday to Friday just created a
+problem for four football players.  To do that you have to know every student, what
+organizations they're in, how that lines up with the academic calendar, and how all
+of it hits the athletic schedule.  That's both systems, not one.
+
+That's a much deeper integration than what I'm asking for today and I'm not asking
+for it now.  There's a lot we can do without it.  But that's the piece that would
+actually cut down the calls from parents, and I'd rather raise it now than have you
+find out later that we hadn't thought about it.
+
+If you decide you want that capability, we can talk about what it would take.  That
+one should be on your timing, not ours.
+
 And just so it's clear, we aren't trying to replace Blackbaud.  What we're going
 after is the facilities and field space mess Truman keeps running into.  If
 anything this takes some load off Blackbaud.
