@@ -94,6 +94,7 @@ model School {
   operationsTemplates    OperationsTemplate[]
   eventChecklists        EventChecklist[]
   blackbaudConnection    BlackbaudConnection?
+  externalMappings       ExternalMapping[]
 
   @@map("schools")
 }
@@ -610,4 +611,78 @@ model BlackbaudConnection {
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@map("blackbaud_connections")
+}
+
+// ---------------------------------------------------------------------------
+// External system identity mapping
+// ---------------------------------------------------------------------------
+
+enum ExternalSystem {
+  BLACKBAUD
+}
+
+enum ExternalEntityType {
+  TEAM
+  SEASON
+  FACILITY
+  OPPONENT
+}
+
+/// How a mapping was established, so a reconciliation screen can show whether a
+/// link was confirmed by a person or merely proposed by name similarity.
+enum MatchMethod {
+  EXACT
+  FUZZY
+  MANUAL
+  IMPORTED
+}
+
+/// Links an AthleticOS record to its counterpart in an external system.
+///
+/// Names are never the linkage. "Varsity Soccer (Girls)" here and "Girls Varsity
+/// Soccer" there are the same team, and either side can be renamed at any time, so
+/// matching on names breaks silently and permanently. Names are only ever used to
+/// PROPOSE a pair to a human; the confirmed link is an id recorded here.
+///
+/// entityId is polymorphic with no foreign key, matching ConflictOverride.eventId.
+/// Prisma cannot express a FK whose target table varies by a sibling column, and
+/// the alternative is four nullable columns and four constraints.
+model ExternalMapping {
+  id       String @id @default(cuid())
+  schoolId String @map("school_id")
+
+  system     ExternalSystem
+  entityType ExternalEntityType @map("entity_type")
+
+  /// The AthleticOS record's id.
+  entityId String @map("entity_id")
+
+  /// The identifier the external system uses. Opaque to us.
+  externalId String @map("external_id")
+
+  /// The external record's name when the link was made. Display only, and
+  /// deliberately not kept in sync - it is a breadcrumb for a human reviewing the
+  /// mapping, never a matching key.
+  externalLabel String? @map("external_label")
+
+  matchMethod MatchMethod @default(MANUAL) @map("match_method")
+
+  confirmedBy String?   @map("confirmed_by")
+  confirmedAt DateTime? @map("confirmed_at")
+
+  lastSyncedAt DateTime? @map("last_synced_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  // One local record maps to at most one external record per system, and one
+  // external record claims at most one local record. Both directions matter: without
+  // the second, two AthleticOS teams could quietly point at the same Blackbaud team
+  // and both would sync the same schedule.
+  @@unique([schoolId, system, entityType, entityId], name: "unique_local_entity")
+  @@unique([schoolId, system, entityType, externalId], name: "unique_external_entity")
+  @@index([schoolId, system, entityType])
+  @@map("external_mappings")
 }
