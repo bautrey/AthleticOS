@@ -24,6 +24,11 @@ services:
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
       PORT: 8000
+      # Inside the container, loopback is not reachable through the published port
+      # mapping, so the process must bind every interface here. Exposure is
+      # controlled below by which host interface the port is published on, not by
+      # this. Set explicitly rather than inferred from NODE_ENV.
+      HOST: 0.0.0.0
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       APP_URL: http://localhost:3005
       # Blackbaud SKY API — defaults to mock mode. To use live OAuth against Blackbaud,
@@ -36,7 +41,11 @@ services:
       BLACKBAUD_SUBSCRIPTION_KEY: ${BLACKBAUD_SUBSCRIPTION_KEY:-}
       BLACKBAUD_REDIRECT_URI: ${BLACKBAUD_REDIRECT_URI:-http://localhost:8003/auth/blackbaud/callback}
     ports:
-      - "8003:8000"
+      # Published on loopback only. "8003:8000" publishes on every host interface,
+      # which puts the API on the LAN again regardless of what the process binds
+      # inside the container. Set BIND_HOST=0.0.0.0 for the rare case of reaching
+      # this from a phone, and prefer the tailnet address over the whole LAN.
+      - "${BIND_HOST:-127.0.0.1}:8003:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -50,7 +59,8 @@ services:
     environment:
       VITE_API_URL: http://localhost:8003
     ports:
-      - "3005:3000"
+      # Same reasoning as the api service above.
+      - "${BIND_HOST:-127.0.0.1}:3005:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules

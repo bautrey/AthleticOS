@@ -4,7 +4,7 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import { config } from './config.js';
+import { config, resolveHost } from './config.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { schoolsRoutes } from './modules/schools/routes.js';
 import { teamsRoutes } from './modules/teams/routes.js';
@@ -109,8 +109,9 @@ await app.register(async (api) => {
 // Start
 const start = async () => {
   try {
-    await app.listen({ port: config.PORT, host: '0.0.0.0' });
-    console.log(`Server running at http://localhost:${config.PORT}`);
+    const host = resolveHost();
+    await app.listen({ port: config.PORT, host });
+    console.log(`Server running at http://localhost:${config.PORT} (bound to ${host})`);
     console.log(`API docs at http://localhost:${config.PORT}/docs`);
   } catch (err) {
     app.log.error(err);
