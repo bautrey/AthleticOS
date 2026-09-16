@@ -95,6 +95,7 @@ model School {
   eventChecklists        EventChecklist[]
   blackbaudConnection    BlackbaudConnection?
   externalMappings       ExternalMapping[]
+  externalApiCalls       ExternalApiCall[]
 
   @@map("schools")
 }
@@ -685,4 +686,42 @@ model ExternalMapping {
   @@unique([schoolId, system, entityType, externalId], name: "unique_external_entity")
   @@index([schoolId, system, entityType])
   @@map("external_mappings")
+}
+
+/// Append-only record of every outbound call to an external system.
+///
+/// Promised to TCA in writing: "every call is logged with timestamp, endpoint and
+/// response code, available to TCA on request." This is that record.
+///
+/// Request and response BODIES are deliberately absent. An audit trail that stored
+/// them would become a second copy of the student data the integration reads, which
+/// is the opposite of the point - it would enlarge the footprint the trail exists to
+/// account for.
+model ExternalApiCall {
+  id       String         @id @default(cuid())
+  schoolId String         @map("school_id")
+  system   ExternalSystem
+
+  method String
+  /// Endpoint path including query string. No bodies, ever.
+  path   String
+
+  /// HTTP status, or null when no response arrived at all (network failure, timeout).
+  status Int?
+  /// Short failure class when status is null. Never the error message, which can
+  /// carry response content.
+  errorKind String? @map("error_kind")
+
+  durationMs Int @map("duration_ms")
+
+  /// The user whose action caused the call, when one did. Null for background sync.
+  actingUserId String? @map("acting_user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, createdAt])
+  @@index([schoolId, system, createdAt])
+  @@map("external_api_calls")
 }

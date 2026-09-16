@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { config } from '../../config.js';
 import { blackbaudService } from './service.js';
+import { recordApiCall, classifyError } from './audit.js';
 import {
   skyTeamCollectionSchema,
   skyScheduleCollectionSchema,
@@ -118,6 +119,12 @@ export class MockBlackbaudSkyClient implements BlackbaudSkyClient {
 
 interface LiveClientDeps {
   schoolId: string;
+  /**
+   * The user whose action caused these calls, when one did. Threaded through so the
+   * audit trail can answer "who" and not only "what". Left unset by background sync,
+   * which is a real answer rather than a missing one.
+   */
+  actingUserId?: string | null;
 }
 
 export class LiveBlackbaudSkyClient implements BlackbaudSkyClient {
@@ -161,7 +168,34 @@ export class LiveBlackbaudSkyClient implements BlackbaudSkyClient {
     headers.set('Bb-Api-Subscription-Key', config.BLACKBAUD_SUBSCRIPTION_KEY);
     if (!headers.has('Accept')) headers.set('Accept', 'application/json');
 
-    const res = await fetch(url, { ...init, headers });
+    // Every SKY call funnels through here, including the 401 retry below, which
+    // recurses and so records as the two separate calls it really is.
+    const method = (init.method ?? 'GET').toUpperCase();
+    const startedAt = Date.now();
+    let res: Response;
+    try {
+      res = await fetch(url, { ...init, headers });
+    } catch (err) {
+      await recordApiCall({
+        schoolId: this.deps.schoolId,
+        method,
+        path: endpointPath,
+        status: null,
+        errorKind: classifyError(err),
+        durationMs: Date.now() - startedAt,
+        actingUserId: this.deps.actingUserId,
+      });
+      throw err;
+    }
+
+    await recordApiCall({
+      schoolId: this.deps.schoolId,
+      method,
+      path: endpointPath,
+      status: res.status,
+      durationMs: Date.now() - startedAt,
+      actingUserId: this.deps.actingUserId,
+    });
 
     if (res.status === 401 && allowRetry) {
       const refreshed = await blackbaudService.refreshAccessToken(conn.refreshToken);

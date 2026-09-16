@@ -50,3 +50,11 @@ export const blackbaudTokenResponseSchema = z.object({
 });
 
 export type BlackbaudTokenResponse = z.infer<typeof blackbaudTokenResponseSchema>;
+
+/** Query for the outbound-call audit trail. */
+export const auditQuerySchema = z.object({
+  schoolId: z.string().min(1),
+  limit: z.coerce.number().int().positive().max(500).default(100),
+  /** ISO timestamp; returns calls at or after it. */
+  since: z.string().datetime().optional(),
+});

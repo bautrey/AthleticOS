@@ -5,11 +5,13 @@ import { config } from '../../config.js';
 import { prisma } from '../../common/db.js';
 import { ForbiddenError } from '../../common/errors.js';
 import { blackbaudService } from './service.js';
+import { listApiCalls } from './audit.js';
 import {
   oauthCallbackQuerySchema,
   connectQuerySchema,
   statusQuerySchema,
   disconnectBodySchema,
+  auditQuerySchema,
 } from './schemas.js';
 
 /**
@@ -52,6 +54,29 @@ export async function blackbaudRoutes(app: FastifyInstance) {
     }
     const status = await blackbaudService.getStatus(schoolId);
     return { data: status };
+  });
+
+  // Audit trail of outbound SKY calls for a school.
+  //
+  // The commitment to schools is that the record is available to them on request,
+  // so this is readable by any member of the school rather than admins only - the
+  // point is that they can check on us without asking us.
+  app.get('/blackbaud/audit', async (request) => {
+    const { schoolId, limit, since } = auditQuerySchema.parse(request.query);
+    const { userId } = request.user as { userId: string };
+
+    const su = await prisma.schoolUser.findUnique({
+      where: { schoolId_userId: { schoolId, userId } },
+    });
+    if (!su) {
+      throw new ForbiddenError('Not a member of this school');
+    }
+
+    const calls = await listApiCalls(schoolId, {
+      limit,
+      since: since ? new Date(since) : undefined,
+    });
+    return { data: calls };
   });
 
   // Disconnect (drops the BlackbaudConnection row).
