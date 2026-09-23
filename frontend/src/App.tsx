@@ -20,6 +20,7 @@ import { SmsOptOutPage } from './pages/SmsOptOutPage';
 import { WeeklyBoardPage } from './pages/WeeklyBoardPage';
 import { OperationsReadinessPage } from './pages/OperationsReadinessPage';
 import { FacilityRequestsPage } from './pages/FacilityRequestsPage';
+import { IntegrationsPage } from './pages/IntegrationsPage';
 import { FacilityAvailabilityPage } from './pages/FacilityAvailabilityPage';
 import { CommunityPortalPage } from './pages/CommunityPortalPage';
 
@@ -63,6 +64,9 @@ function AppRoutes() {
       <Route path="/schools/:schoolId/operations" element={<ProtectedRoute><OperationsReadinessPage /></ProtectedRoute>} />
       <Route path="/schools/:schoolId/facility-requests" element={<ProtectedRoute><FacilityRequestsPage /></ProtectedRoute>} />
       <Route path="/schools/:schoolId/facilities/:facilityId/availability" element={<ProtectedRoute><FacilityAvailabilityPage /></ProtectedRoute>} />
+      {/* Blackbaud OAuth callback redirects here without a school in the path. */}
+      <Route path="/settings/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
+      <Route path="/schools/:schoolId/settings/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
     </Routes>
   );
 }
