@@ -276,9 +276,15 @@ export class LiveBlackbaudSkyClient implements BlackbaudSkyClient {
  * Get a SKY client for the given school. Returns the mock client if BLACKBAUD_MODE=mock,
  * otherwise the live client. Same downstream code regardless of mode.
  */
-export function getBlackbaudClient(schoolId: string): BlackbaudSkyClient {
+export function getBlackbaudClient(
+  schoolId: string,
+  actingUserId?: string | null
+): BlackbaudSkyClient {
   if (config.BLACKBAUD_MODE === 'mock') {
     return new MockBlackbaudSkyClient();
   }
-  return new LiveBlackbaudSkyClient({ schoolId });
+  // actingUserId is threaded through so the audit trail can say who caused the
+  // call, which is the difference between "something read your calendar" and
+  // "Omar ran a connection test at 4:12pm".
+  return new LiveBlackbaudSkyClient({ schoolId, actingUserId });
 }

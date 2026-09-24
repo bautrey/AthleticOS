@@ -84,6 +84,14 @@ export function Sidebar() {
                 >
                   Facility Requests
                 </NavLink>
+                <NavLink
+                  to={`/schools/${school.id}/settings/integrations`}
+                  className={({ isActive }) =>
+                    `block px-6 py-1.5 rounded text-xs text-gray-400 ${isActive ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 hover:text-gray-200'}`
+                  }
+                >
+                  Integrations
+                </NavLink>
               </div>
             ))}
           </div>

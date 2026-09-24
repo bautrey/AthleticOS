@@ -6,6 +6,7 @@ import { prisma } from '../../common/db.js';
 import { ForbiddenError } from '../../common/errors.js';
 import { blackbaudService } from './service.js';
 import { listApiCalls } from './audit.js';
+import { testConnection } from './test-connection.js';
 import {
   oauthCallbackQuerySchema,
   connectQuerySchema,
@@ -77,6 +78,24 @@ export async function blackbaudRoutes(app: FastifyInstance) {
       since: since ? new Date(since) : undefined,
     });
     return { data: calls };
+  });
+
+  // Run read-only checks against the connected environment.
+  //
+  // POST rather than GET because it causes real outbound calls, and those calls
+  // are recorded in the audit trail attributed to whoever pressed the button.
+  app.post('/blackbaud/test', async (request) => {
+    const { schoolId } = disconnectBodySchema.parse(request.body);
+    const { userId } = request.user as { userId: string };
+
+    const su = await prisma.schoolUser.findUnique({
+      where: { schoolId_userId: { schoolId, userId } },
+    });
+    if (!su || !MANAGEMENT.includes(su.role as any)) {
+      throw new ForbiddenError('Only school admins/ADs can test the Blackbaud connection');
+    }
+
+    return { data: await testConnection(schoolId, userId) };
   });
 
   // Disconnect (drops the BlackbaudConnection row).

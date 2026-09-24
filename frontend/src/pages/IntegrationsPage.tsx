@@ -14,7 +14,12 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../components/Layout';
 import { schoolsApi } from '../api/schools';
-import { blackbaudApi, type ExternalApiCall } from '../api/blackbaud';
+import {
+  blackbaudApi,
+  type ExternalApiCall,
+  type ConnectionTestResult,
+  type ConnectionCheck,
+} from '../api/blackbaud';
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
@@ -26,6 +31,39 @@ function formatWhen(iso: string): string {
     minute: '2-digit',
     second: '2-digit',
   });
+}
+
+function CheckRow({ check }: { check: ConnectionCheck }) {
+  return (
+    <li className="py-3 first:pt-0 last:pb-0">
+      <div className="flex items-start gap-3">
+        <span
+          className={`mt-0.5 shrink-0 px-2 py-0.5 text-xs font-medium rounded-full ${
+            check.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}
+        >
+          {check.ok ? 'OK' : 'Failed'}
+        </span>
+        <div className="min-w-0">
+          <div className="font-medium text-gray-900">
+            {check.label}
+            {check.ok && typeof check.count === 'number' && (
+              <span className="ml-2 font-normal text-gray-500">
+                {check.count} {check.count === 1 ? 'record' : 'records'}
+              </span>
+            )}
+          </div>
+          <div className="font-mono text-xs text-gray-500 break-all">{check.endpoint}</div>
+          {check.error && <div className="text-sm text-red-700 mt-1">{check.error}</div>}
+          {check.ok && check.sample && check.sample.length > 0 && (
+            <div className="text-sm text-gray-600 mt-1">
+              e.g. {check.sample.join(', ')}
+            </div>
+          )}
+        </div>
+      </div>
+    </li>
+  );
 }
 
 function StatusPill({ call }: { call: ExternalApiCall }) {
@@ -83,6 +121,18 @@ export function IntegrationsPage() {
   const disconnect = useMutation({
     mutationFn: () => blackbaudApi.disconnect(schoolId!),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['blackbaud'] }),
+  });
+
+  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
+  const runTest = useMutation({
+    mutationFn: () => blackbaudApi.testConnection(schoolId!),
+    onSuccess: (result) => {
+      setTestResult(result);
+      // The test just made real calls. Refresh the log so they appear below it,
+      // which is the point: the school sees its own action land in the record.
+      queryClient.invalidateQueries({ queryKey: ['blackbaud', 'audit', schoolId] });
+    },
+    onError: () => setTestResult(null),
   });
 
   async function handleConnect() {
@@ -185,16 +235,58 @@ export function IntegrationsPage() {
                   </div>
                 )}
               </dl>
-              <button
-                onClick={() => disconnect.mutate()}
-                disabled={disconnect.isPending}
-                className="px-3 py-1.5 text-sm border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50"
-              >
-                {disconnect.isPending ? 'Disconnecting…' : 'Disconnect'}
-              </button>
+              <div className="flex flex-wrap gap-3 items-center">
+                <button
+                  onClick={() => runTest.mutate()}
+                  disabled={runTest.isPending}
+                  className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {runTest.isPending ? 'Testing…' : 'Test connection'}
+                </button>
+                <button
+                  onClick={() => disconnect.mutate()}
+                  disabled={disconnect.isPending}
+                  className="px-3 py-1.5 text-sm border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50"
+                >
+                  {disconnect.isPending ? 'Disconnecting…' : 'Disconnect'}
+                </button>
+              </div>
+
               <p className="text-xs text-gray-500 mt-2">
+                Testing reads your athletics teams and the next two weeks of your school
+                calendar. It reads nothing else, and no student records. Every call it makes
+                is listed in the activity log below.
+              </p>
+
+              {runTest.isError && (
+                <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  The test could not run. Please try again.
+                </div>
+              )}
+
+              {testResult && (
+                <div
+                  className={`mt-4 rounded-lg border px-4 py-3 ${
+                    testResult.ok ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'
+                  }`}
+                >
+                  <div className="font-medium text-gray-900 mb-1">
+                    {testResult.ok
+                      ? 'Connection works. AthleticOS can read the following.'
+                      : 'Some checks did not pass.'}
+                  </div>
+                  <ul className="divide-y divide-gray-200 mt-2">
+                    {testResult.checks.map((check) => (
+                      <CheckRow key={check.endpoint} check={check} />
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-xs text-gray-500 mt-3">
                 Disconnecting deletes the stored token. You can also revoke access at any time
-                from your own Blackbaud admin portal, which does not require us to act.
+                from your own Blackbaud admin portal, or simply change the account's password,
+                neither of which requires us to act.
               </p>
             </>
           ) : (

@@ -21,6 +21,22 @@ export interface ExternalApiCall {
   createdAt: string;
 }
 
+export interface ConnectionCheck {
+  label: string;
+  endpoint: string;
+  ok: boolean;
+  count?: number;
+  sample?: string[];
+  error?: string;
+}
+
+export interface ConnectionTestResult {
+  ok: boolean;
+  mode: string;
+  ranAt: string;
+  checks: ConnectionCheck[];
+}
+
 export const blackbaudApi = {
   getStatus: async (schoolId: string): Promise<BlackbaudStatus> => {
     const { data } = await api.get(`/blackbaud/status?schoolId=${encodeURIComponent(schoolId)}`);
@@ -35,6 +51,12 @@ export const blackbaudApi = {
   getAuthorizeUrl: async (schoolId: string): Promise<string> => {
     const { data } = await api.get(`/blackbaud/connect?schoolId=${encodeURIComponent(schoolId)}`);
     return data.data.authorizeUrl;
+  },
+
+  /** Runs real read-only calls and returns what came back. Recorded in the audit trail. */
+  testConnection: async (schoolId: string): Promise<ConnectionTestResult> => {
+    const { data } = await api.post('/blackbaud/test', { schoolId });
+    return data.data;
   },
 
   disconnect: async (schoolId: string): Promise<void> => {
