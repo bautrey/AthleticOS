@@ -3,6 +3,7 @@ import { prisma } from '../../common/db.js';
 import { ValidationError } from '../../common/errors.js';
 import { notificationService } from '../notifications/service.js';
 import type { BulkMoveInput, RainPlanInput, AutoResolveInput } from './schemas.js';
+import { resolveGameDurationMinutes } from '../conflicts/schemas.js';
 
 interface MovePreviewItem {
   id: string;
@@ -19,9 +20,95 @@ interface RainMoveItem {
   type: 'game' | 'practice';
   teamName: string;
   datetime: string;
+  originalFacilityId: string;
   originalFacility: string;
+  fallbackFacilityId: string;
   fallbackFacility: string;
+  /**
+   * Whether something is already booked in the fallback at this time. Moving into
+   * an occupied space is how an outdoor cancellation turns into an indoor
+   * double-booking, so the preview says so rather than leaving it to be discovered.
+   */
+  fallbackOccupied: boolean;
   opponent?: string;
+}
+
+/** A booking already sitting in a fallback space: [start, end) in epoch millis. */
+interface OccupiedSpan {
+  start: number;
+  end: number;
+}
+
+/**
+ * Everything already booked in the given facilities over a date range.
+ *
+ * Read in one pass and indexed by facility so the rain plan can answer "is the gym
+ * free at 3:30 on Thursday" without a query per move.
+ */
+async function loadFallbackOccupancy(
+  schoolId: string,
+  facilityIds: string[],
+  fromDate: Date,
+  toDate: Date,
+  gameDurationMinutes: number
+): Promise<Map<string, OccupiedSpan[]>> {
+  const index = new Map<string, OccupiedSpan[]>();
+  if (facilityIds.length === 0) return index;
+
+  const where = {
+    facilityId: { in: facilityIds },
+    datetime: { gte: fromDate, lte: toDate },
+    season: { team: { schoolId } },
+  };
+  const [games, practices] = await Promise.all([
+    prisma.game.findMany({ where, select: { facilityId: true, datetime: true } }),
+    prisma.practice.findMany({
+      where,
+      select: { facilityId: true, datetime: true, durationMinutes: true },
+    }),
+  ]);
+
+  const add = (facilityId: string | null, datetime: Date, minutes: number) => {
+    if (!facilityId) return;
+    const start = datetime.getTime();
+    const spans = index.get(facilityId) ?? [];
+    spans.push({ start, end: start + minutes * 60_000 });
+    index.set(facilityId, spans);
+  };
+
+  // A Game carries no duration, so its footprint comes from the school's own
+  // gameDurationMinutes setting - the same resolution the conflicts engine uses,
+  // rather than a second guess that could disagree with it.
+  for (const game of games) add(game.facilityId, game.datetime, gameDurationMinutes);
+  for (const practice of practices) add(practice.facilityId, practice.datetime, practice.durationMinutes);
+
+  return index;
+}
+
+/** Add a span to an occupancy index, so later moves see earlier ones. */
+function occupy(
+  index: Map<string, OccupiedSpan[]>,
+  facilityId: string,
+  datetime: Date,
+  durationMinutes: number
+): void {
+  const start = datetime.getTime();
+  const spans = index.get(facilityId) ?? [];
+  spans.push({ start, end: start + durationMinutes * 60_000 });
+  index.set(facilityId, spans);
+}
+
+/** Whether the event would land on top of something already in the fallback. */
+function isOccupied(
+  index: Map<string, OccupiedSpan[]>,
+  facilityId: string,
+  datetime: Date,
+  durationMinutes: number
+): boolean {
+  const start = datetime.getTime();
+  const end = start + durationMinutes * 60_000;
+  // Half-open: an event that starts exactly when another ends is not a collision.
+  return (index.get(facilityId) ?? []).some(span => span.start < end && start < span.end);
 }
 
 export const bulkOpsService = {
@@ -163,11 +250,14 @@ export const bulkOpsService = {
       throw new ValidationError('fromDate must be before toDate');
     }
 
-    // Get outdoor facilities with rain fallbacks
+    // Whether a space is exposed to the weather is a fact about the space, not
+    // about its type: tennis courts are COURT and outdoors, a field house is OTHER
+    // and indoors. Selecting on FacilityType rained out the indoor courts and
+    // missed every outdoor space nobody could find a type for.
     const outdoorFacilities = await prisma.facility.findMany({
       where: {
         schoolId,
-        type: { in: ['FIELD', 'TRACK', 'COURT'] },
+        isOutdoor: true,
         rainFallbackId: { not: null },
       },
       include: {
@@ -179,10 +269,26 @@ export const bulkOpsService = {
       outdoorFacilities.map(f => [f.id, { fallbackId: f.rainFallbackId!, fallbackName: f.rainFallback!.name, originalName: f.name }])
     );
     const outdoorIds = outdoorFacilities.map(f => f.id);
+    const fallbackIds = [...new Set(outdoorFacilities.map(f => f.rainFallbackId!))];
 
     if (outdoorIds.length === 0) {
-      return { dryRun: input.dryRun, count: 0, moves: [], message: 'No outdoor facilities with rain fallbacks configured.' };
+      return { dryRun: input.dryRun, count: 0, occupiedCount: 0, moves: [] as RainMoveItem[], message: 'No outdoor facilities with rain fallbacks configured.' };
     }
+
+    // What is already booked in the fallback spaces over this range, so a move can
+    // say whether it is landing on top of something. Read once rather than per move.
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { settings: true },
+    });
+    const gameDurationMinutes = resolveGameDurationMinutes(school?.settings);
+    const occupied = await loadFallbackOccupancy(
+      schoolId,
+      fallbackIds,
+      fromDate,
+      toDate,
+      gameDurationMinutes
+    );
 
     const moves: RainMoveItem[] = [];
 
@@ -206,10 +312,18 @@ export const bulkOpsService = {
           type: 'game',
           teamName: game.season.team.name,
           datetime: game.datetime.toISOString(),
+          originalFacilityId: game.facilityId!,
           originalFacility: fb.originalName,
+          fallbackFacilityId: fb.fallbackId,
           fallbackFacility: fb.fallbackName,
+          fallbackOccupied: isOccupied(occupied, fb.fallbackId, game.datetime, gameDurationMinutes),
           opponent: game.opponent,
         });
+        // This move now occupies the fallback, so a later move landing in the
+        // same space at the same time sees it. Checking only against what was
+        // ALREADY booked let two rained-out events pile into one empty gym and
+        // both report it free - the exact collision this field exists to warn about.
+        occupy(occupied, fb.fallbackId, game.datetime, gameDurationMinutes);
       }
     }
 
@@ -233,25 +347,39 @@ export const bulkOpsService = {
           type: 'practice',
           teamName: practice.season.team.name,
           datetime: practice.datetime.toISOString(),
+          originalFacilityId: practice.facilityId!,
           originalFacility: fb.originalName,
+          fallbackFacilityId: fb.fallbackId,
           fallbackFacility: fb.fallbackName,
+          fallbackOccupied: isOccupied(
+            occupied,
+            fb.fallbackId,
+            practice.datetime,
+            practice.durationMinutes
+          ),
         });
+        occupy(occupied, fb.fallbackId, practice.datetime, practice.durationMinutes);
       }
     }
 
+    const occupiedCount = moves.filter(m => m.fallbackOccupied).length;
+
     if (input.dryRun) {
-      return { dryRun: true, count: moves.length, moves };
+      return { dryRun: true, count: moves.length, occupiedCount, moves };
     }
 
-    // Execute: update facility IDs to fallback
+    // Execute: update facility IDs to fallback.
+    //
+    // Keyed on the id carried by the move. Re-finding the facility by name matched
+    // whichever record happened to be first when two spaces share a name, so a
+    // school with an indoor and an outdoor "Tennis Courts" moved the wrong events.
     const ops: any[] = [];
     for (const move of moves) {
-      const fb = outdoorFacilities.find(f => f.name === move.originalFacility);
-      if (!fb) continue;
+      const data = { facilityId: move.fallbackFacilityId };
       if (move.type === 'game') {
-        ops.push(prisma.game.update({ where: { id: move.id }, data: { facilityId: fb.rainFallbackId! } }));
+        ops.push(prisma.game.update({ where: { id: move.id }, data }));
       } else {
-        ops.push(prisma.practice.update({ where: { id: move.id }, data: { facilityId: fb.rainFallbackId! } }));
+        ops.push(prisma.practice.update({ where: { id: move.id }, data }));
       }
     }
 
@@ -269,7 +397,7 @@ export const bulkOpsService = {
       },
     });
 
-    return { dryRun: false, count: moves.length, moves };
+    return { dryRun: false, count: moves.length, occupiedCount, moves };
   },
 
   /**

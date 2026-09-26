@@ -1,11 +1,28 @@
 // frontend/src/api/schools.ts
 import { api } from './client';
 
+/** Which measure the school's written heat policy is stated in. */
+export type HeatMeasure = 'WBGT' | 'HEAT_INDEX';
+
+export interface WeatherPolicy {
+  /** Null means the school has stated no policy, and nothing is raised. */
+  thresholdF: number | null;
+  measure: HeatMeasure;
+  lookaheadDays: number;
+  practiceWindow: { start: string; end: string };
+}
+
+export interface SchoolSettings extends Record<string, unknown> {
+  weather?: Partial<WeatherPolicy>;
+}
+
 export interface School {
   id: string;
   name: string;
   timezone: string;
-  settings: Record<string, unknown>;
+  latitude: number | null;
+  longitude: number | null;
+  settings: SchoolSettings;
   createdAt: string;
   updatedAt: string;
 }
@@ -13,7 +30,9 @@ export interface School {
 export interface CreateSchoolInput {
   name: string;
   timezone: string;
-  settings?: Record<string, unknown>;
+  latitude?: number | null;
+  longitude?: number | null;
+  settings?: SchoolSettings;
 }
 
 export const schoolsApi = {
@@ -32,8 +51,10 @@ export const schoolsApi = {
     return data.data;
   },
 
+  // PATCH, not PUT: the API registers only PATCH /schools/:id, so every save from
+  // this client 404'd.
   update: async (id: string, input: Partial<CreateSchoolInput>): Promise<School> => {
-    const { data } = await api.put(`/schools/${id}`, input);
+    const { data } = await api.patch(`/schools/${id}`, input);
     return data.data;
   },
 

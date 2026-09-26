@@ -1,5 +1,54 @@
 // backend/src/config.ts
 import { z } from 'zod';
+import { Webhook } from 'svix';
+
+/**
+ * Bytes in a Svix-style `whsec_<base64>` secret once the prefix is stripped and
+ * the remainder decoded. Zero for anything that does not decode.
+ */
+/**
+ * Whether a configured webhook secret is safe to verify with.
+ *
+ * Empty is allowed and means inbound is not configured - the route answers 503
+ * in that state rather than accepting unsigned traffic, so an unconfigured
+ * deployment still boots.
+ *
+ * Two independent things have to hold, and the first version of this checked
+ * only the second.
+ *
+ * It has to be a secret the VERIFIER accepts. `Buffer.from(x, 'base64')` is
+ * lenient and silently drops characters it does not recognise, while
+ * standardwebhooks decodes with @stablelib/base64, which is strict. Measured:
+ * "whsec_AAAAAAAAAAAAAAAAAAAAAA==AAAAAAAAAAAAAAAAAAAA" reports 16 bytes through
+ * Buffer and is rejected outright by svix - so a mangled secret would have
+ * passed config and then thrown on every single delivery, 401-ing legitimate
+ * traffic with nothing said at startup. Constructing the real Webhook is the
+ * only check that cannot diverge from the thing that will use it.
+ *
+ * And the key has to be long enough to mean anything. standardwebhooks 1.0.0
+ * tests `if (!secret)` BEFORE decoding, so it happily builds a zero-byte HMAC
+ * key from the literal "whsec_" and then verifies whatever a stranger computes.
+ * Constructing it does not catch that; the length does.
+ */
+export function isUsableWebhookSecret(raw: string): boolean {
+  if (raw === '') return true;
+  if (decodedSecretBytes(raw) < 16) return false;
+  try {
+    new Webhook(raw);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function decodedSecretBytes(raw: string): number {
+  const body = raw.startsWith('whsec_') ? raw.slice('whsec_'.length) : raw;
+  try {
+    return Buffer.from(body, 'base64').byteLength;
+  } catch {
+    return 0;
+  }
+}
 
 const envSchema = z.object({
   DATABASE_URL: z.string(),
@@ -31,6 +80,41 @@ const envSchema = z.object({
   // omits `scopes_supported`, confirming this. `offline_access` is required to get a
   // refresh_token back. Override here only if Blackbaud documents new scopes later.
   BLACKBAUD_SCOPES: z.string().default('offline_access'),
+
+  // National Weather Service. No key; they ask instead for a User-Agent naming the
+  // application and a contact address, and serve 403 to generic agent strings.
+  NWS_CONTACT_EMAIL: z.string().default('burke@autreymail.com'),
+  WEATHER_MODE: z.enum(['mock', 'live']).default('mock'),
+
+  // Inbound imports. Schools send scheduled reports to <token>@<this domain>;
+  // it is a subdomain so that adding MX records cannot disturb the sending setup
+  // already published on athleticos.co.
+  INBOUND_EMAIL_DOMAIN: z.string().default('in.athleticos.co'),
+  // Svix signing secret for the provider's delivery webhook. Empty means inbound
+  // is not configured, and the webhook refuses every request rather than
+  // accepting unsigned ones.
+  //
+  // A non-empty value has to decode to a real key. standardwebhooks 1.0.0 tests
+  // `if (!secret)` BEFORE base64-decoding, so the literal string "whsec_" builds
+  // a Webhook with a zero-byte HMAC key and then verifies any signature a
+  // stranger can compute - confirmed by running it against the installed tree.
+  // The route's own empty check does not catch that, because "whsec_" is not
+  // empty. Validating the decoded length here closes it at the boundary and
+  // keeps holding whichever svix line we are on: 1.1.1 fixed it upstream, and
+  // this config does not depend on having that.
+  INBOUND_WEBHOOK_SECRET: z
+    .string()
+    .default('')
+    .refine(
+      (v) => isUsableWebhookSecret(v),
+      'INBOUND_WEBHOOK_SECRET must be empty, or a secret the webhook verifier accepts ' +
+        'that decodes to at least 16 bytes. A short one produces a weak HMAC key that ' +
+        'accepts forged signatures; a malformed one is rejected by the verifier on every ' +
+        'delivery while looking valid here.'
+    ),
+  // Largest attachment we will store, in bytes. A term of SchoolDude runs a few
+  // hundred KB; this is a bound on what a stranger can push into the database.
+  INBOUND_MAX_BYTES: z.coerce.number().int().positive().default(15 * 1024 * 1024),
 });
 
 export const config = envSchema.parse(process.env);

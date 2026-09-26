@@ -2,7 +2,7 @@
 // Pure resolution logic, no database and no listener opened.
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { config, resolveHost } from './config.js';
+import { config, resolveHost, isUsableWebhookSecret, decodedSecretBytes } from './config.js';
 
 const originalHost = config.HOST;
 const originalNodeEnv = config.NODE_ENV;
@@ -68,5 +68,46 @@ describe('resolveHost', () => {
       (config as { NODE_ENV: string }).NODE_ENV = nodeEnv;
       expect(resolveHost({})).not.toBe('0.0.0.0');
     }
+  });
+});
+
+describe('isUsableWebhookSecret', () => {
+  // The inbound webhook's ONLY authentication is this secret. standardwebhooks
+  // 1.0.0 checks `if (!secret)` before base64-decoding, so "whsec_" builds a
+  // zero-byte HMAC key and then verifies any signature a stranger can compute.
+  // The route's empty-string guard does not catch it, because "whsec_" is not
+  // empty. Confirmed by running svix against the installed tree before writing
+  // this, not inferred from the changelog.
+
+  it('REFUSES a secret that decodes to nothing', () => {
+    expect(isUsableWebhookSecret('whsec_')).toBe(false);
+  });
+
+  it('refuses a secret too short to be a real key', () => {
+    // 8 bytes: enough to look like a secret, not enough to be one.
+    expect(isUsableWebhookSecret('whsec_' + Buffer.alloc(8).toString('base64'))).toBe(false);
+  });
+
+  it('accepts a real Svix secret', () => {
+    expect(
+      isUsableWebhookSecret('whsec_' + Buffer.from('a'.repeat(32)).toString('base64'))
+    ).toBe(true);
+  });
+
+  it('REFUSES a secret the verifier itself will not take', () => {
+    // The trap this exists for: Buffer.from(x,'base64') is lenient and drops
+    // characters it does not recognise, while standardwebhooks decodes
+    // strictly. This value reports 16 bytes through Buffer and is rejected by
+    // svix, so a length-only check passed it at boot and then every real
+    // delivery 401'd with nothing said at startup. Measured, not assumed.
+    const mangled = 'whsec_AAAAAAAAAAAAAAAAAAAAAA==AAAAAAAAAAAAAAAAAAAA';
+    expect(decodedSecretBytes(mangled)).toBeGreaterThanOrEqual(16);
+    expect(isUsableWebhookSecret(mangled)).toBe(false);
+  });
+
+  it('still accepts empty, which means inbound is simply not configured', () => {
+    // The route answers 503 in that state rather than accepting unsigned
+    // traffic, so a deployment without inbound configured must stay bootable.
+    expect(isUsableWebhookSecret('')).toBe(true);
   });
 });

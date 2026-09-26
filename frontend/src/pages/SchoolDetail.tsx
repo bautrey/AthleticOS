@@ -8,6 +8,7 @@ import { TeamsTab } from '../components/TeamsTab';
 import { FacilitiesTab } from '../components/FacilitiesTab';
 import { SeasonsTab } from '../components/SeasonsTab';
 import { SettingsTab } from '../components/SettingsTab';
+import { WeatherPolicyForm } from '../components/WeatherPolicyForm';
 import { SchoolMembers } from '../components/SchoolMembers';
 import { schoolsApi } from '../api/schools';
 import { teamsApi } from '../api/teams';
@@ -20,6 +21,7 @@ const TABS = [
   { id: 'seasons', label: 'Seasons' },
   { id: 'members', label: 'Members' },
   { id: 'settings', label: 'Settings' },
+  { id: 'weather', label: 'Heat alerts' },
 ];
 
 export function SchoolDetail() {
@@ -136,6 +138,7 @@ export function SchoolDetail() {
         {activeTab === 'seasons' && <SeasonsTab schoolId={schoolId!} />}
         {activeTab === 'members' && <SchoolMembers schoolId={schoolId!} />}
         {activeTab === 'settings' && <SettingsTab school={school} />}
+        {activeTab === 'weather' && <WeatherPolicyForm school={school} />}
       </Tabs>
     </Layout>
   );
