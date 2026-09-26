@@ -75,12 +75,31 @@ export async function inboundWebhookRoutes(app: FastifyInstance) {
         'svix-timestamp': String(request.headers['svix-timestamp'] ?? ''),
         'svix-signature': String(request.headers['svix-signature'] ?? ''),
       });
-    } catch {
-      // Includes an expired timestamp, which is svix's replay guard.
-      request.log.warn('inbound webhook signature rejected');
+    } catch (err) {
+      // Answers 401 for everything, including an expired timestamp, which is
+      // svix's replay guard. Failing closed is right: this is the endpoint's
+      // only authentication.
+      //
+      // The LOG distinguishes what 401 cannot. standardwebhooks 1.0.0 parses
+      // the payload inside verify(), so a correctly signed body that is not
+      // JSON throws here and is answered "Invalid signature" - true of the
+      // call, false about the cause, and it would send whoever is debugging it
+      // hunting a signing mismatch that does not exist.
+      const unparseable = err instanceof SyntaxError;
+      request.log.warn(
+        unparseable
+          ? 'inbound webhook rejected: the body is not JSON. The signature may well have ' +
+              'been valid - the verifier parses the payload itself and throws before it can ' +
+              'say. Answering 401 regardless, because this endpoint fails closed.'
+          : 'inbound webhook signature rejected'
+      );
       return reply.status(401).send({ error: { message: 'Invalid signature' } });
     }
 
+    // Cannot throw on the pinned svix line: verify() above already JSON.parsed
+    // the same string and would have thrown first. Kept because it is the only
+    // thing standing between a future svix 2.x - which returns the raw string
+    // and parses nothing - and an unhandled exception on this path.
     let payload: unknown;
     try {
       payload = JSON.parse(raw);

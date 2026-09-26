@@ -2,7 +2,7 @@
 // Pure resolution logic, no database and no listener opened.
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { config, resolveHost, isUsableWebhookSecret } from './config.js';
+import { config, resolveHost, isUsableWebhookSecret, decodedSecretBytes } from './config.js';
 
 const originalHost = config.HOST;
 const originalNodeEnv = config.NODE_ENV;
@@ -92,6 +92,17 @@ describe('isUsableWebhookSecret', () => {
     expect(
       isUsableWebhookSecret('whsec_' + Buffer.from('a'.repeat(32)).toString('base64'))
     ).toBe(true);
+  });
+
+  it('REFUSES a secret the verifier itself will not take', () => {
+    // The trap this exists for: Buffer.from(x,'base64') is lenient and drops
+    // characters it does not recognise, while standardwebhooks decodes
+    // strictly. This value reports 16 bytes through Buffer and is rejected by
+    // svix, so a length-only check passed it at boot and then every real
+    // delivery 401'd with nothing said at startup. Measured, not assumed.
+    const mangled = 'whsec_AAAAAAAAAAAAAAAAAAAAAA==AAAAAAAAAAAAAAAAAAAA';
+    expect(decodedSecretBytes(mangled)).toBeGreaterThanOrEqual(16);
+    expect(isUsableWebhookSecret(mangled)).toBe(false);
   });
 
   it('still accepts empty, which means inbound is simply not configured', () => {

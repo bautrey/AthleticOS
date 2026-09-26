@@ -1,5 +1,6 @@
 // backend/src/config.ts
 import { z } from 'zod';
+import { Webhook } from 'svix';
 
 /**
  * Bytes in a Svix-style `whsec_<base64>` secret once the prefix is stripped and
@@ -11,9 +12,33 @@ import { z } from 'zod';
  * Empty is allowed and means inbound is not configured - the route answers 503
  * in that state rather than accepting unsigned traffic, so an unconfigured
  * deployment still boots.
+ *
+ * Two independent things have to hold, and the first version of this checked
+ * only the second.
+ *
+ * It has to be a secret the VERIFIER accepts. `Buffer.from(x, 'base64')` is
+ * lenient and silently drops characters it does not recognise, while
+ * standardwebhooks decodes with @stablelib/base64, which is strict. Measured:
+ * "whsec_AAAAAAAAAAAAAAAAAAAAAA==AAAAAAAAAAAAAAAAAAAA" reports 16 bytes through
+ * Buffer and is rejected outright by svix - so a mangled secret would have
+ * passed config and then thrown on every single delivery, 401-ing legitimate
+ * traffic with nothing said at startup. Constructing the real Webhook is the
+ * only check that cannot diverge from the thing that will use it.
+ *
+ * And the key has to be long enough to mean anything. standardwebhooks 1.0.0
+ * tests `if (!secret)` BEFORE decoding, so it happily builds a zero-byte HMAC
+ * key from the literal "whsec_" and then verifies whatever a stranger computes.
+ * Constructing it does not catch that; the length does.
  */
 export function isUsableWebhookSecret(raw: string): boolean {
-  return raw === '' || decodedSecretBytes(raw) >= 16;
+  if (raw === '') return true;
+  if (decodedSecretBytes(raw) < 16) return false;
+  try {
+    new Webhook(raw);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function decodedSecretBytes(raw: string): number {
@@ -82,8 +107,10 @@ const envSchema = z.object({
     .default('')
     .refine(
       (v) => isUsableWebhookSecret(v),
-      'INBOUND_WEBHOOK_SECRET must be empty or decode to at least 16 bytes; a short or ' +
-        'undecodable one produces a weak HMAC key that accepts forged signatures'
+      'INBOUND_WEBHOOK_SECRET must be empty, or a secret the webhook verifier accepts ' +
+        'that decodes to at least 16 bytes. A short one produces a weak HMAC key that ' +
+        'accepts forged signatures; a malformed one is rejected by the verifier on every ' +
+        'delivery while looking valid here.'
     ),
   // Largest attachment we will store, in bytes. A term of SchoolDude runs a few
   // hundred KB; this is a bound on what a stranger can push into the database.

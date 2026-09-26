@@ -162,6 +162,27 @@ describe('inbound email webhook', () => {
       expect(res.statusCode).toBe(401);
     });
 
+    it('still refuses a correctly signed body that is not JSON', async () => {
+      // standardwebhooks parses the payload inside verify(), so this throws
+      // there rather than at our own JSON.parse. Answering 401 is right - the
+      // endpoint fails closed - and the log says what actually happened, which
+      // the status code cannot.
+      const payload = 'not json at all';
+      const id = 'msg_notjson';
+      const at = new Date();
+      const res = await post(
+        {
+          'content-type': 'application/json',
+          'svix-id': id,
+          'svix-timestamp': Math.floor(at.getTime() / 1000).toString(),
+          'svix-signature': new Webhook(SECRET).sign(id, at, payload),
+        },
+        payload
+      );
+      expect(res.statusCode).toBe(401);
+      expect(await prisma.inboundImport.count({ where: { schoolId } })).toBe(0);
+    });
+
     it('refuses everything when no secret is configured', async () => {
       // An unset secret must not degrade into accepting unsigned traffic, which
       // would leave an open write endpoint on the internet.
