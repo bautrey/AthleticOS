@@ -15,6 +15,7 @@ import { practicesRoutes } from './modules/practices/routes.js';
 import { blockersRoutes } from './modules/blockers/routes.js';
 import { conflictsRoutes } from './modules/conflicts/routes.js';
 import { importRoutes } from './modules/import/routes.js';
+import { inboundRoutes, inboundWebhookRoutes } from './modules/inbound/routes.js';
 import { sharesRoutes } from './modules/shares/routes.js';
 import { priorityRuleRoutes } from './modules/priority-rules/routes.js';
 import { publicScheduleRoutes } from './modules/shares/public-routes.js';
@@ -91,6 +92,11 @@ await app.register(async (api) => {
   await api.register(blockersRoutes);
   await api.register(conflictsRoutes);
   await api.register(importRoutes);
+  await api.register(inboundRoutes);
+  // Its own registration, outside the authenticated group: the provider has no
+  // session and the plugin brings a raw-body parser that must not apply anywhere
+  // else.
+  await api.register(inboundWebhookRoutes);
   await api.register(sharesRoutes);
   await api.register(priorityRuleRoutes);
   await api.register(eventsRoutes);

@@ -86,6 +86,13 @@ model School {
   // NWS resolves lat/lon to a fixed forecast gridpoint ("FWD/88,112") that never
   // changes, so it is looked up once and cached here.
   weatherGridpoint String? @map("weather_gridpoint")
+
+  // Local part of this school's inbound import address, e.g. the token in
+  // <token>@in.athleticos.co. Unguessable on purpose: an inbound mailbox is an
+  // unauthenticated write path, so the address itself is the only thing standing
+  // between a stranger and a file in this school's review queue. Deliberately
+  // carries no school name - a guessable address would let anyone enumerate it.
+  inboundToken     String? @unique @map("inbound_token")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -104,6 +111,7 @@ model School {
   blackbaudConnection    BlackbaudConnection?
   externalMappings       ExternalMapping[]
   externalApiCalls       ExternalApiCall[]
+  inboundImports         InboundImport[]
 
   @@map("schools")
 }
@@ -743,4 +751,75 @@ model ExternalApiCall {
   @@index([schoolId, createdAt])
   @@index([schoolId, system, createdAt])
   @@map("external_api_calls")
+}
+
+// ============ Inbound Imports ============
+
+enum InboundSource {
+  /// Arrived as an attachment on mail sent to the school's inbound address.
+  EMAIL
+  /// Uploaded by a person through the app.
+  UPLOAD
+}
+
+enum InboundImportStatus {
+  /// Stored, not yet parsed.
+  RECEIVED
+  /// Parsed, waiting for a person to approve or reject it.
+  NEEDS_REVIEW
+  /// A person approved it and its contents were applied.
+  APPROVED
+  /// A person looked at it and declined it.
+  REJECTED
+  /// We could not read it. failureReason says why.
+  FAILED
+}
+
+/// A file that arrived for a school, and what we made of it.
+///
+/// Nothing here is applied to a schedule on arrival. A scheduled SchoolDude
+/// report lands in this queue, gets parsed so a person can see what it contains,
+/// and changes the calendar only once somebody approves it. The last real export
+/// held 870 events and 39 facility conflicts, so a silent auto-apply would rewrite
+/// a term's schedule with nobody having looked.
+model InboundImport {
+  id                String              @id @default(cuid())
+  schoolId          String              @map("school_id")
+  source            InboundSource       @default(EMAIL)
+
+  /// Who sent it, as the provider reported it. Recorded for the audit trail and
+  /// so a school can restrict which senders it accepts.
+  fromAddress       String              @map("from_address")
+  /// The address it was sent to, which is how we resolved the school.
+  toAddress         String              @map("to_address")
+  subject           String?
+  /// The provider's own id for the message. Unique, so a webhook delivered twice
+  /// stores one row - providers retry, and a retry must not duplicate an import.
+  providerMessageId String?             @unique @map("provider_message_id")
+
+  filename          String?
+  contentType       String?             @map("content_type")
+  sizeBytes         Int?                @map("size_bytes")
+  /// The file itself. Held here rather than behind a provider URL because those
+  /// expire (Resend's download links last an hour) and a review queue has to
+  /// still have the file when somebody opens it tomorrow.
+  content           Bytes?
+
+  status            InboundImportStatus @default(RECEIVED)
+  /// What the parser found: counts, date range, conflicts. Shown in review.
+  parseSummary      Json?               @map("parse_summary")
+  /// Why it could not be read. Never carries provider error text verbatim.
+  failureReason     String?             @map("failure_reason")
+
+  reviewedBy        String?             @map("reviewed_by")
+  reviewedAt        DateTime?           @map("reviewed_at")
+  reviewNotes       String?             @map("review_notes")
+
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  school            School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, status, createdAt])
+  @@map("inbound_imports")
 }

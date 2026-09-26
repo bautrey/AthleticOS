@@ -36,6 +36,18 @@ const envSchema = z.object({
   // application and a contact address, and serve 403 to generic agent strings.
   NWS_CONTACT_EMAIL: z.string().default('burke@autreymail.com'),
   WEATHER_MODE: z.enum(['mock', 'live']).default('mock'),
+
+  // Inbound imports. Schools send scheduled reports to <token>@<this domain>;
+  // it is a subdomain so that adding MX records cannot disturb the sending setup
+  // already published on athleticos.co.
+  INBOUND_EMAIL_DOMAIN: z.string().default('in.athleticos.co'),
+  // Svix signing secret for the provider's delivery webhook. Empty means inbound
+  // is not configured, and the webhook refuses every request rather than
+  // accepting unsigned ones.
+  INBOUND_WEBHOOK_SECRET: z.string().default(''),
+  // Largest attachment we will store, in bytes. A term of SchoolDude runs a few
+  // hundred KB; this is a bound on what a stranger can push into the database.
+  INBOUND_MAX_BYTES: z.coerce.number().int().positive().default(15 * 1024 * 1024),
 });
 
 export const config = envSchema.parse(process.env);
