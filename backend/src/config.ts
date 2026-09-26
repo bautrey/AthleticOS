@@ -1,6 +1,30 @@
 // backend/src/config.ts
 import { z } from 'zod';
 
+/**
+ * Bytes in a Svix-style `whsec_<base64>` secret once the prefix is stripped and
+ * the remainder decoded. Zero for anything that does not decode.
+ */
+/**
+ * Whether a configured webhook secret is safe to verify with.
+ *
+ * Empty is allowed and means inbound is not configured - the route answers 503
+ * in that state rather than accepting unsigned traffic, so an unconfigured
+ * deployment still boots.
+ */
+export function isUsableWebhookSecret(raw: string): boolean {
+  return raw === '' || decodedSecretBytes(raw) >= 16;
+}
+
+export function decodedSecretBytes(raw: string): number {
+  const body = raw.startsWith('whsec_') ? raw.slice('whsec_'.length) : raw;
+  try {
+    return Buffer.from(body, 'base64').byteLength;
+  } catch {
+    return 0;
+  }
+}
+
 const envSchema = z.object({
   DATABASE_URL: z.string(),
   JWT_SECRET: z.string().min(32),
@@ -44,7 +68,23 @@ const envSchema = z.object({
   // Svix signing secret for the provider's delivery webhook. Empty means inbound
   // is not configured, and the webhook refuses every request rather than
   // accepting unsigned ones.
-  INBOUND_WEBHOOK_SECRET: z.string().default(''),
+  //
+  // A non-empty value has to decode to a real key. standardwebhooks 1.0.0 tests
+  // `if (!secret)` BEFORE base64-decoding, so the literal string "whsec_" builds
+  // a Webhook with a zero-byte HMAC key and then verifies any signature a
+  // stranger can compute - confirmed by running it against the installed tree.
+  // The route's own empty check does not catch that, because "whsec_" is not
+  // empty. Validating the decoded length here closes it at the boundary and
+  // keeps holding whichever svix line we are on: 1.1.1 fixed it upstream, and
+  // this config does not depend on having that.
+  INBOUND_WEBHOOK_SECRET: z
+    .string()
+    .default('')
+    .refine(
+      (v) => isUsableWebhookSecret(v),
+      'INBOUND_WEBHOOK_SECRET must be empty or decode to at least 16 bytes; a short or ' +
+        'undecodable one produces a weak HMAC key that accepts forged signatures'
+    ),
   // Largest attachment we will store, in bytes. A term of SchoolDude runs a few
   // hundred KB; this is a bound on what a stranger can push into the database.
   INBOUND_MAX_BYTES: z.coerce.number().int().positive().default(15 * 1024 * 1024),
