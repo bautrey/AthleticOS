@@ -31,6 +31,11 @@ const envSchema = z.object({
   // omits `scopes_supported`, confirming this. `offline_access` is required to get a
   // refresh_token back. Override here only if Blackbaud documents new scopes later.
   BLACKBAUD_SCOPES: z.string().default('offline_access'),
+
+  // National Weather Service. No key; they ask instead for a User-Agent naming the
+  // application and a contact address, and serve 403 to generic agent strings.
+  NWS_CONTACT_EMAIL: z.string().default('burke@autreymail.com'),
+  WEATHER_MODE: z.enum(['mock', 'live']).default('mock'),
 });
 
 export const config = envSchema.parse(process.env);

@@ -36,6 +36,9 @@ services:
       # from macOS keychain in your shell before `docker compose up`:
       #   export BLACKBAUD_APP_SECRET=$(security find-generic-password -a burkestudio -s athleticos-blackbaud-app-secret -w)
       #   export BLACKBAUD_SUBSCRIPTION_KEY=$(security find-generic-password -a burkestudio -s athleticos-blackbaud-subscription-key -w)
+      # Weather. Defaults to replaying the recorded NWS forecast so local work needs
+      # no network. Set WEATHER_MODE=live to call api.weather.gov, which needs no key.
+      WEATHER_MODE: ${WEATHER_MODE:-mock}
       BLACKBAUD_MODE: ${BLACKBAUD_MODE:-mock}
       BLACKBAUD_APP_SECRET: ${BLACKBAUD_APP_SECRET:-}
       BLACKBAUD_SUBSCRIPTION_KEY: ${BLACKBAUD_SUBSCRIPTION_KEY:-}

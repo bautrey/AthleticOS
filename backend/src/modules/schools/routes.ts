@@ -24,31 +24,31 @@ export async function schoolsRoutes(app: FastifyInstance) {
   });
 
   // Get school by ID
-  app.get('/schools/:id', async (request) => {
+  app.get('/schools/:schoolId', async (request) => {
     const { userId } = request.user as { userId: string };
-    const { id } = request.params as { id: string };
-    const school = await schoolsService.findById(id, userId);
+    const { schoolId } = request.params as { schoolId: string };
+    const school = await schoolsService.findById(schoolId, userId);
     return { data: school };
   });
 
   // Update school
-  app.patch('/schools/:id', {
+  app.patch('/schools/:schoolId', {
     preHandler: [requireRole(...MANAGEMENT)],
   }, async (request) => {
     const { userId } = request.user as { userId: string };
-    const { id } = request.params as { id: string };
+    const { schoolId } = request.params as { schoolId: string };
     const input = updateSchoolSchema.parse(request.body);
-    const school = await schoolsService.update(id, input, userId);
+    const school = await schoolsService.update(schoolId, input, userId);
     return { data: school };
   });
 
   // Delete school
-  app.delete('/schools/:id', {
+  app.delete('/schools/:schoolId', {
     preHandler: [requireRole(...MANAGEMENT)],
   }, async (request, reply) => {
     const { userId } = request.user as { userId: string };
-    const { id } = request.params as { id: string };
-    await schoolsService.delete(id, userId);
+    const { schoolId } = request.params as { schoolId: string };
+    await schoolsService.delete(schoolId, userId);
     return reply.status(204).send();
   });
 }

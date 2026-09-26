@@ -1,0 +1,10 @@
+{
+ "_note": "Real api.weather.gov/points/32.9668,-96.8236 response (TCA, Addison TX), captured 2026-09-26.",
+ "properties": {
+  "gridId": "FWD",
+  "gridX": 88,
+  "gridY": 112,
+  "forecastGridData": "https://api.weather.gov/gridpoints/FWD/88,112",
+  "timeZone": "America/Chicago"
+ }
+}

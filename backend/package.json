@@ -4,13 +4,14 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "node --stack-size=4096 ./node_modules/typescript/bin/tsc",
+    "build": "node --stack-size=4096 ./node_modules/typescript/bin/tsc && npm run build:assets",
     "start": "node dist/server.js",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "build:assets": "node -e \"require('fs').cpSync('src/modules/weather/fixtures','dist/modules/weather/fixtures',{recursive:true})\""
   },
   "dependencies": {
     "@fastify/cors": "9.0.1",

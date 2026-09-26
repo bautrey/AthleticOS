@@ -241,6 +241,99 @@ export const blockerService = {
   },
 
   /**
+   * Create or update the blocker a job owns, identified by its sourceKey.
+   *
+   * A job that scans a rolling window re-evaluates the same day on every run - a
+   * three-day forecast assesses Thursday on Tuesday, Wednesday and Thursday. Without
+   * a key to write against, each pass would add another blocker for the same closure
+   * and send another alert.
+   *
+   * `created` tells the caller whether this is news. Notifying only on creation, or
+   * on a change to when the closure runs, is what keeps a daily job from mailing
+   * every coach every morning about a closure they already know about.
+   */
+  async upsertSourced(
+    schoolId: string,
+    sourceKey: string,
+    data: CreateBlockerInput,
+    createdBy: string
+  ): Promise<{ blocker: Blocker; conflictingEvents: ConflictingEventsCount; created: boolean; changed: boolean }> {
+    if (data.facilityId) {
+      const facility = await prisma.facility.findFirst({
+        where: { id: data.facilityId, schoolId },
+      });
+      if (!facility) throw new NotFoundError('Facility', data.facilityId);
+    }
+    if (data.teamId) {
+      const team = await prisma.team.findFirst({ where: { id: data.teamId, schoolId } });
+      if (!team) throw new NotFoundError('Team', data.teamId);
+    }
+
+    const cleaned = cleanDataForScope(data);
+    const existing = await prisma.blocker.findUnique({ where: { sourceKey } });
+
+    // A sourceKey is owned by one school. Finding it on another is a key-construction
+    // bug, and silently rewriting that school's blocker would be worse than failing.
+    if (existing && existing.schoolId !== schoolId) {
+      throw new ValidationError(`sourceKey "${sourceKey}" already belongs to another school`);
+    }
+
+    const changed =
+      existing !== null &&
+      (existing.startDatetime.getTime() !== cleaned.startDatetime.getTime() ||
+        existing.endDatetime.getTime() !== cleaned.endDatetime.getTime() ||
+        existing.name !== cleaned.name);
+
+    const blocker = await prisma.blocker.upsert({
+      where: { sourceKey },
+      create: {
+        type: cleaned.type,
+        name: cleaned.name,
+        description: cleaned.description,
+        scope: cleaned.scope,
+        teamId: cleaned.teamId,
+        facilityId: cleaned.facilityId,
+        startDatetime: cleaned.startDatetime,
+        endDatetime: cleaned.endDatetime,
+        schoolId,
+        sourceKey,
+        createdBy,
+      },
+      update: {
+        name: cleaned.name,
+        description: cleaned.description,
+        startDatetime: cleaned.startDatetime,
+        endDatetime: cleaned.endDatetime,
+      },
+    });
+
+    return {
+      blocker,
+      conflictingEvents: await countConflictingEvents(blocker),
+      created: existing === null,
+      changed,
+    };
+  },
+
+  /**
+   * Withdraw the job-owned blockers under `prefix` that the job no longer asserts.
+   *
+   * A forecast that drops back below the threshold has to take its blocker with it,
+   * or the schedule keeps showing a closure that is no longer predicted. Only rows
+   * carrying a sourceKey are touched, so a blocker a person typed is never removed
+   * by a job.
+   */
+  async withdrawSourced(schoolId: string, prefix: string, keepKeys: string[]): Promise<number> {
+    const result = await prisma.blocker.deleteMany({
+      where: {
+        schoolId,
+        sourceKey: { startsWith: prefix, notIn: keepKeys },
+      },
+    });
+    return result.count;
+  },
+
+  /**
    * Update an existing blocker
    */
   async update(

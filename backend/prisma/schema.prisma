@@ -78,6 +78,14 @@ model School {
   name      String
   timezone  String   @default("America/New_York")
   settings  Json     @default("{}")
+
+  // Where the school is, for weather. Null means we do not know, and the
+  // weather scan skips the school rather than guessing a location.
+  latitude  Float?
+  longitude Float?
+  // NWS resolves lat/lon to a fixed forecast gridpoint ("FWD/88,112") that never
+  // changes, so it is looked up once and cached here.
+  weatherGridpoint String? @map("weather_gridpoint")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -148,6 +156,9 @@ model Facility {
   schoolId       String       @map("school_id")
   name           String
   type           FacilityType @default(GYM)
+  // Whether this space is exposed to the weather. Not derivable from `type`:
+  // tennis courts are COURT and outdoor, a field house is OTHER and indoor.
+  isOutdoor      Boolean      @default(false) @map("is_outdoor")
   capacity       Int?
   rainFallbackId String?      @map("rain_fallback_id")
   createdAt      DateTime     @default(now()) @map("created_at")
@@ -278,6 +289,10 @@ model Blocker {
   // When is it blocked? (stored in UTC)
   startDatetime DateTime     @map("start_datetime")
   endDatetime   DateTime     @map("end_datetime")
+
+  // Identifies a blocker that a job owns, so re-running the job updates the same
+  // row instead of stacking duplicates. Null for blockers a person created.
+  sourceKey     String?      @unique @map("source_key")
 
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
@@ -620,6 +635,10 @@ model BlackbaudConnection {
 
 enum ExternalSystem {
   BLACKBAUD
+  // National Weather Service. Public data, no credentials, but the calls still go
+  // in the same trail: a school should be able to see everything we fetch on its
+  // behalf, not only the parts that touch student records.
+  NWS
 }
 
 enum ExternalEntityType {

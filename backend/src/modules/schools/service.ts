@@ -10,6 +10,8 @@ export const schoolsService = {
       data: {
         name: input.name,
         timezone: input.timezone,
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
         settings: (input.settings ?? {}) as Prisma.InputJsonValue,
         schoolUsers: {
           create: { userId, role: 'ADMIN' },
@@ -42,6 +44,10 @@ export const schoolsService = {
       data: {
         ...input,
         settings: input.settings ? (input.settings as Prisma.InputJsonValue) : undefined,
+        // Coordinates and the cached gridpoint travel together: a school that moves
+        // keeps NWS's answer for where it used to be until the next lookup.
+        weatherGridpoint:
+          input.latitude !== undefined || input.longitude !== undefined ? null : undefined,
       },
     });
     return school;

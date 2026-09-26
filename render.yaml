@@ -20,6 +20,43 @@ services:
         value: production
     healthCheckPath: /health
 
+  # Daily weather scan. Same image as the API, different command: it talks to the
+  # database directly rather than calling an endpoint, because there is no
+  # service-to-service auth scheme to hang an endpoint off.
+  #
+  # 11:00 UTC is 6am Central, so a breach found in the morning still leaves the day
+  # to rebook a space and tell parents. The scan looks three days ahead.
+  - type: cron
+    name: athleticos-weather-scan
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    schedule: "0 11 * * *"
+    dockerCommand: node dist/jobs/weather-scan.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: athleticos-db
+          property: connectionString
+      # config.ts parses one schema for every entry point, so the job needs the
+      # same minimum set the API validates even where it never uses them.
+      - key: JWT_SECRET
+        fromService:
+          name: athleticos-api
+          type: web
+          envVarKey: JWT_SECRET
+      - key: NODE_ENV
+        value: production
+      - key: WEATHER_MODE
+        value: live
+      # NWS serves 403 to a generic User-Agent and asks for a contact address.
+      - key: NWS_CONTACT_EMAIL
+        value: burke@autreymail.com
+      - key: RESEND_API_KEY
+        sync: false
+      - key: APP_URL
+        value: https://athleticos-web.onrender.com
+
   - type: web
     name: athleticos-web
     runtime: static
