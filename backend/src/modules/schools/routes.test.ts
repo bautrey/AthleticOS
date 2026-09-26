@@ -175,6 +175,23 @@ describe('schools routes', () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it('leaves DELETE unreachable, as it has always been', async () => {
+    // Renaming this route's param alongside PATCH would have switched on a hard
+    // delete cascading across 11 relations, for the first time and without
+    // anyone deciding to. It stays on ':id' so requireRole cannot resolve a
+    // school and answers 403 to everyone, exactly as before. Issue #14 decides
+    // whether a school should be deletable at all.
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/schools/${schoolId}`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(res.statusCode).toBe(403);
+
+    // And the school is still there.
+    expect(await prisma.school.findUnique({ where: { id: schoolId } })).not.toBeNull();
+  });
+
   it('refuses an unauthenticated caller', async () => {
     const res = await app.inject({ method: 'PATCH', url: `/schools/${schoolId}`, payload: {} });
     expect(res.statusCode).toBe(401);

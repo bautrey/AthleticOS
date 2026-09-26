@@ -42,13 +42,28 @@ export async function schoolsRoutes(app: FastifyInstance) {
     return { data: school };
   });
 
-  // Delete school
-  app.delete('/schools/:schoolId', {
+  // Delete school.
+  //
+  // DELIBERATELY still on ':id', which leaves this route unreachable.
+  //
+  // requireRole resolves a school from params.schoolId or params.seasonId
+  // (auth.ts:25), so ':id' makes it throw before it reads anyone's role and
+  // every caller gets 403 - an ADMIN of this school included. That is the same
+  // bug the rename fixed for PATCH above, and fixing it here too would switch
+  // on, for the first time, a hard delete cascading across 11 relations: teams,
+  // seasons, games, practices, facilities, blockers, inbound imports. One call,
+  // no confirmation, no undo.
+  //
+  // Nothing has ever reached it and the frontend has no delete endpoint, so
+  // leaving it exactly as it has always been costs nobody anything. Whether a
+  // school should be deletable, and whether that cascades or goes soft, is a
+  // decision on its own - tracked in issue #14.
+  app.delete('/schools/:id', {
     preHandler: [requireRole(...MANAGEMENT)],
   }, async (request, reply) => {
     const { userId } = request.user as { userId: string };
-    const { schoolId } = request.params as { schoolId: string };
-    await schoolsService.delete(schoolId, userId);
+    const { id } = request.params as { id: string };
+    await schoolsService.delete(id, userId);
     return reply.status(204).send();
   });
 }
