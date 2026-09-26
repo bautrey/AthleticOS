@@ -1,0 +1,46 @@
+Draft email to Truman - does TCA have an on-site weather station?
+
+Not sent. Burke sends from burke@autreymail.com.
+
+Why this matters: NWS gives us a forecast wet bulb globe temperature, which is
+the right measure and the right lead time for planning. It is not the on-site
+reading a heat policy is administered from. If TCA already has a station on the
+fields, we read from it for the day-of number and keep the forecast for the
+Tuesday warning. The code is already built behind an interface so a station feed
+drops in without a rewrite.
+
+The other half of the ask is the threshold. TCA is TAPPS, so UIL's mandatory WBGT
+limits do not apply and TAPPS publishes theirs as recommended. We deliberately
+ship with no number in the box - whatever TCA's own plan says is what goes in.
+
+To:  tblocker@trinitychristian.org
+Subject: Heat alerts - a couple of questions
+
+
+Truman -
+
+I built the first piece of the heat thing we talked about. It pulls the forecast
+for the school and flags outdoor practices a few days out, so you find out
+Tuesday that Thursday afternoon is a problem instead of at 3pm for a 3:30
+practice. It also tells you which indoor space is free, which I think is the part
+that would have actually saved you that day.
+
+Two things I need from you.
+
+First - does TCA have a weather station on the fields? I think I've seen the
+hardware out there. If you've got one (Perry Weather or similar) I want to read
+from it directly. The forecast is good for planning ahead, but the real reading
+off your own field is what your heat policy actually runs on, and I'd rather show
+you both than pretend the forecast is the same thing.
+
+Second - what's your threshold, and who owns it? I left that field BLANK on
+purpose. I'm not going to put a number in there that looks official when it came
+from me. You're TAPPS, so the UIL numbers aren't binding on you, and I'd guess
+Beck or your trainer has something written down already. Whatever that says is
+what we'll use.
+
+One note so you know what you're looking at - the system will never move a
+practice on its own. It raises the flag, shows you what's affected and where else
+you could go, and you decide.
+
+Burke
