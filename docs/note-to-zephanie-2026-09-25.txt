@@ -1,0 +1,39 @@
+Draft email - ask for the athletic calendar as Excel rather than PDF
+
+New thread. Burke and Zephanie have no prior direct correspondence; she sent the
+PDF to Truman on 2026-09-22 and he forwarded it. She closed with "Please let me
+know if there is anything else I can do to help!", which is why this goes to her
+directly rather than back through Truman.
+
+FSDirect report screens end with a format choice, PDF or Excel Spreadsheet
+(help.brightlysoftware.com, Reporting in FSDirect). She almost certainly picked
+PDF without thinking about it.
+
+To:  zdykes@trinitychristian.org
+Cc:  tblocker@trinitychristian.org
+Subject: Athletic calendar - could we get the Excel version?
+
+
+Zephanie -
+
+Thanks for putting the athletic calendar together and sending it through Truman.
+It's already being put to use.
+
+One small follow-up if it's easy. When you run that report in SchoolDude there's a
+format choice near the bottom, PDF or Excel. Could you run the same one again and
+pick Excel?
+
+The PDF works, but we're reading it into software, and a PDF flattens everything
+into a picture of a table rather than a table. We lose a bit of the detail that
+way. The spreadsheet keeps the columns intact.
+
+Same report and same date range as last time is perfect - no need to change any of
+the settings.
+
+If the Location Detail Report is easy to run as well, that one would help too,
+since it's organized by facility rather than by schedule. Only if it's quick
+though. The first one is what matters.
+
+Thanks again for the help.
+
+Burke
