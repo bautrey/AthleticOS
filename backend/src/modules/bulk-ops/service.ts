@@ -85,6 +85,19 @@ async function loadFallbackOccupancy(
   return index;
 }
 
+/** Add a span to an occupancy index, so later moves see earlier ones. */
+function occupy(
+  index: Map<string, OccupiedSpan[]>,
+  facilityId: string,
+  datetime: Date,
+  durationMinutes: number
+): void {
+  const start = datetime.getTime();
+  const spans = index.get(facilityId) ?? [];
+  spans.push({ start, end: start + durationMinutes * 60_000 });
+  index.set(facilityId, spans);
+}
+
 /** Whether the event would land on top of something already in the fallback. */
 function isOccupied(
   index: Map<string, OccupiedSpan[]>,
@@ -304,7 +317,13 @@ export const bulkOpsService = {
           fallbackFacilityId: fb.fallbackId,
           fallbackFacility: fb.fallbackName,
           fallbackOccupied: isOccupied(occupied, fb.fallbackId, game.datetime, gameDurationMinutes),
+          opponent: game.opponent,
         });
+        // This move now occupies the fallback, so a later move landing in the
+        // same space at the same time sees it. Checking only against what was
+        // ALREADY booked let two rained-out events pile into one empty gym and
+        // both report it free - the exact collision this field exists to warn about.
+        occupy(occupied, fb.fallbackId, game.datetime, gameDurationMinutes);
       }
     }
 
@@ -339,6 +358,7 @@ export const bulkOpsService = {
             practice.durationMinutes
           ),
         });
+        occupy(occupied, fb.fallbackId, practice.datetime, practice.durationMinutes);
       }
     }
 

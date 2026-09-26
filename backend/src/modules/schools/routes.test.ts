@@ -130,6 +130,41 @@ describe('schools routes', () => {
     );
   });
 
+  it('NEVER returns the inbound mailbox token in a school payload', async () => {
+    // The token is a bearer credential for the school's import mailbox: whoever
+    // holds it can mail a file into that school's review queue from anywhere,
+    // through the one path with no session. The endpoint that reveals it is
+    // gated to MANAGEMENT, so the ordinary school payload must not hand it to
+    // every coach, parent and athlete.
+    await prisma.school.update({
+      where: { id: schoolId },
+      data: { inboundToken: 'abcdefghjkmnpqrstvwx' },
+    });
+
+    for (const token of [adminToken, athleteToken]) {
+      const one = await app.inject({
+        method: 'GET',
+        url: `/schools/${schoolId}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(one.statusCode).toBe(200);
+      expect(one.body).not.toContain('abcdefghjkmnpqrstvwx');
+      expect(one.json().data).not.toHaveProperty('inboundToken');
+
+      const many = await app.inject({
+        method: 'GET',
+        url: '/schools',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(many.body).not.toContain('abcdefghjkmnpqrstvwx');
+    }
+
+    // And the field still round-trips on a write, so this is a response filter
+    // rather than the column having been lost.
+    const stored = await prisma.school.findUniqueOrThrow({ where: { id: schoolId } });
+    expect(stored.inboundToken).toBe('abcdefghjkmnpqrstvwx');
+  });
+
   it('still refuses a member who is not management', async () => {
     const res = await app.inject({
       method: 'PATCH',

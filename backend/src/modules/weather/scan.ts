@@ -35,6 +35,11 @@ import {
 } from './policy.js';
 import type { WeatherSource } from './source.js';
 
+/** The UTC calendar date of an instant, which is how rainPlan reads its arguments. */
+function utcDate(when: Date): string {
+  return when.toISOString().slice(0, 10);
+}
+
 /** Recorded as the blocker's author. The column is free text with no user FK. */
 export const WEATHER_ACTOR = 'system:weather';
 
@@ -62,6 +67,12 @@ export interface AffectedFacility {
   fallbackOccupied: boolean;
   blockerId: string;
   blockerCreated: boolean;
+  /**
+   * The closure already existed but now runs at a different time. Worth telling
+   * people about: a coach who read "the stadium is out until 6:30" needs to know
+   * when it becomes 7:00.
+   */
+  blockerChanged: boolean;
 }
 
 export interface DayOutcome {
@@ -162,7 +173,14 @@ export const weatherScanService = {
     result.blockersWithdrawn = await blockerService.withdrawSourced(
       schoolId,
       sourceKeyPrefix(schoolId),
-      keysAsserted
+      keysAsserted,
+      // Only the days this run assessed. A scan that looked three days ahead is
+      // in no position to retract last month's closure, which is a record of
+      // what happened rather than a forecast it still asserts.
+      {
+        from: windowBounds(dates[0], policy, school.timezone).start,
+        to: windowBounds(dates[dates.length - 1], policy, school.timezone).end,
+      }
     );
 
     if (!options.quiet) {
@@ -221,13 +239,24 @@ export const weatherScanService = {
 
     // One rain-plan dry run for the whole day answers "is the fallback free" for
     // every facility at once, reusing the check the manual rain plan already does.
+    // rainPlan takes calendar dates and treats them as whole UTC days. An 18:30
+    // Central practice window is 23:30 UTC and a later one crosses midnight, so
+    // asking for one UTC day both misses the far end of the window and drags in
+    // events from a neighbouring day. Ask for the days the window touches, then
+    // keep only the moves actually inside it.
     const rain = await bulkOpsService.rainPlan(school.id, {
-      fromDate: date,
-      toDate: date,
+      fromDate: utcDate(start),
+      toDate: utcDate(new Date(end.getTime() - 1)),
       dryRun: true,
     });
     const occupiedFallbacks = new Set(
-      rain.moves.filter((m) => m.fallbackOccupied).map((m) => m.originalFacilityId)
+      rain.moves
+        .filter((m) => {
+          const at = new Date(m.datetime).getTime();
+          return at >= start.getTime() && at < end.getTime();
+        })
+        .filter((m) => m.fallbackOccupied)
+        .map((m) => m.originalFacilityId)
     );
 
     const affected: AffectedFacility[] = [];
@@ -262,6 +291,7 @@ export const weatherScanService = {
         fallbackOccupied: occupiedFallbacks.has(facility.id),
         blockerId: blocker.id,
         blockerCreated: created,
+        blockerChanged: changed,
       });
     }
 
@@ -280,7 +310,12 @@ export const weatherScanService = {
     policy: WeatherPolicy,
     result: SchoolScanResult
   ): Promise<number> {
-    const fresh = result.days.filter((d) => d.affected.some((f) => f.blockerCreated));
+    // Newly raised OR moved. upsertSourced returns `changed` precisely so a
+    // closure whose window shifts is not silently different from the one people
+    // were already told about; reading only `blockerCreated` left that promise
+    // unkept.
+    const isNews = (f: AffectedFacility) => f.blockerCreated || f.blockerChanged;
+    const fresh = result.days.filter((d) => d.affected.some(isNews));
     if (fresh.length === 0) return 0;
 
     await notificationService.emit({
@@ -296,7 +331,7 @@ export const weatherScanService = {
           date: day.date,
           peakF: day.assessment.peakF,
           facilities: day.affected
-            .filter((f) => f.blockerCreated)
+            .filter(isNews)
             .map((f) => ({
               name: f.facilityName,
               events: f.eventCount,

@@ -288,6 +288,22 @@ describe('inbound imports', () => {
       await expect(inboundService.approve(otherSchoolId, id, userId)).rejects.toThrow();
     });
 
+    it('lets only one of two simultaneous decisions win', async () => {
+      // Two people open the queue at once, one approves and one rejects. Reading
+      // the status and then writing let both see NEEDS_REVIEW and both succeed,
+      // and the row kept whichever finished last while telling both it worked.
+      const id = await pending();
+      const [a, b] = await Promise.allSettled([
+        inboundService.approve(schoolId, id, userId),
+        inboundService.reject(schoolId, id, userId, 'no'),
+      ]);
+      const outcomes = [a.status, b.status].sort();
+      expect(outcomes).toEqual(['fulfilled', 'rejected']);
+
+      const row = await prisma.inboundImport.findUniqueOrThrow({ where: { id } });
+      expect(['APPROVED', 'REJECTED']).toContain(row.status);
+    });
+
     it('never returns file bytes in the queue listing', async () => {
       await pending();
       const listed = await inboundService.list(schoolId, { page: 1, limit: 25 });

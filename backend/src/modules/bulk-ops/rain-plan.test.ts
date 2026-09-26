@@ -183,6 +183,44 @@ describe('rainPlan', () => {
     expect(result.occupiedCount).toBe(0);
   });
 
+  it('keeps the opponent on a game move', async () => {
+    // RainPlanDialog renders `m.opponent ? 'vs '+m.opponent : m.type`, so dropping
+    // it turns every row into a bare "game".
+    const season = await prisma.season.findFirstOrThrow({ where: { id: seasonId } });
+    await prisma.game.create({
+      data: { seasonId: season.id, facilityId: fieldId, opponent: 'Prestonwood', datetime: WHEN },
+    });
+    const result = await bulkOpsService.rainPlan(schoolId, {
+      fromDate: FROM,
+      toDate: TO,
+      dryRun: true,
+    });
+    expect(result.moves.find((m) => m.type === 'game')?.opponent).toBe('Prestonwood');
+  });
+
+  it('sees the fallback fill up as it plans, not just before it starts', async () => {
+    // Two rained-out practices at the same hour with the same empty fallback.
+    // Checking only against what was ALREADY booked reported both as free and
+    // planned them into the same gym - the collision the field exists to warn about.
+    await prisma.practice.create({
+      data: { seasonId, facilityId: fieldId, datetime: WHEN, durationMinutes: 90 },
+    });
+    await prisma.practice.create({
+      data: { seasonId, facilityId: outdoorCourtId, datetime: WHEN, durationMinutes: 90 },
+    });
+
+    const result = await bulkOpsService.rainPlan(schoolId, {
+      fromDate: FROM,
+      toDate: TO,
+      dryRun: true,
+    });
+
+    expect(result.moves).toHaveLength(2);
+    // The first one into an empty gym is free; the second lands on the first.
+    expect(result.moves.filter((m) => m.fallbackOccupied)).toHaveLength(1);
+    expect(result.occupiedCount).toBe(1);
+  });
+
   it('leaves the schedule alone on a dry run', async () => {
     const practice = await prisma.practice.create({
       data: { seasonId, facilityId: fieldId, datetime: WHEN, durationMinutes: 90 },

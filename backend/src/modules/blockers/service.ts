@@ -323,11 +323,26 @@ export const blockerService = {
    * carrying a sourceKey are touched, so a blocker a person typed is never removed
    * by a job.
    */
-  async withdrawSourced(schoolId: string, prefix: string, keepKeys: string[]): Promise<number> {
+  async withdrawSourced(
+    schoolId: string,
+    prefix: string,
+    keepKeys: string[],
+    /**
+     * The window the caller actually looked at. Only blockers starting inside it
+     * are withdrawn.
+     *
+     * Without it a three-day scan deleted every job-owned blocker under the
+     * prefix, including last month's closures, which are the record of what
+     * happened rather than a prediction still being asserted. A run is only
+     * entitled to withdraw what it was in a position to re-evaluate.
+     */
+    window: { from: Date; to: Date }
+  ): Promise<number> {
     const result = await prisma.blocker.deleteMany({
       where: {
         schoolId,
         sourceKey: { startsWith: prefix, notIn: keepKeys },
+        startDatetime: { gte: window.from, lt: window.to },
       },
     });
     return result.count;

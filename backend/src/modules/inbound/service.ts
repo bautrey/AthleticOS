@@ -111,6 +111,15 @@ export const inboundService = {
       return { stored: true, reason: 'no-attachment' };
     }
 
+    // The declared size, checked before the download. The post-download check
+    // below is still the one that decides, because a declared size is a claim by
+    // the sender - but believing it early means an untrusted party cannot make us
+    // pull a gigabyte to find out we did not want it.
+    if ((attachment.size ?? 0) > config.INBOUND_MAX_BYTES) {
+      await this.recordFailure(school.id, email, matchedToken, providerMessageId, 'too-large');
+      return { stored: true, reason: 'too-large' };
+    }
+
     let content: Buffer;
     try {
       content = attachment.content
@@ -231,32 +240,50 @@ export const inboundService = {
    * the facility mapper.
    */
   async approve(schoolId: string, id: string, userId: string) {
-    const row = await this.getById(schoolId, id);
-    if (row.status !== 'NEEDS_REVIEW') {
-      throw new ValidationError(`Cannot approve an import that is ${row.status}`);
-    }
-    return prisma.inboundImport.update({
-      where: { id },
-      data: { status: 'APPROVED', reviewedBy: userId, reviewedAt: new Date() },
-      select: listFields,
-    });
+    return this.decide(schoolId, id, userId, 'APPROVED', null);
   },
 
   async reject(schoolId: string, id: string, userId: string, notes?: string) {
-    const row = await this.getById(schoolId, id);
-    if (row.status !== 'NEEDS_REVIEW') {
-      throw new ValidationError(`Cannot reject an import that is ${row.status}`);
-    }
-    return prisma.inboundImport.update({
-      where: { id },
-      data: {
-        status: 'REJECTED',
-        reviewedBy: userId,
-        reviewedAt: new Date(),
-        reviewNotes: notes?.slice(0, 500) ?? null,
-      },
-      select: listFields,
+    return this.decide(schoolId, id, userId, 'REJECTED', notes?.slice(0, 500) ?? null);
+  },
+
+  /**
+   * Record a review decision, once.
+   *
+   * The status check is part of the write rather than a read before it. Two
+   * people opening the queue at the same time, one approving and one rejecting,
+   * would both have read NEEDS_REVIEW and both have written - and the row would
+   * end up holding whichever finished last, with the other person told it
+   * succeeded. `updateMany` with the status in the WHERE clause lets the
+   * database decide, and a count of zero means somebody else got there first.
+   */
+  async decide(
+    schoolId: string,
+    id: string,
+    userId: string,
+    status: 'APPROVED' | 'REJECTED',
+    notes: string | null
+  ) {
+    // Establishes that the import exists and belongs to this school, so a caller
+    // from another school gets NotFound rather than a silent no-op.
+    const before = await this.getById(schoolId, id);
+
+    const { count } = await prisma.inboundImport.updateMany({
+      where: { id, schoolId, status: 'NEEDS_REVIEW' },
+      data: { status, reviewedBy: userId, reviewedAt: new Date(), reviewNotes: notes },
     });
+    if (count === 0) {
+      const now = await prisma.inboundImport.findUnique({
+        where: { id },
+        select: { status: true },
+      });
+      throw new ValidationError(
+        `Cannot ${status === 'APPROVED' ? 'approve' : 'reject'} an import that is ` +
+          `${now?.status ?? before.status}`
+      );
+    }
+
+    return prisma.inboundImport.findUniqueOrThrow({ where: { id }, select: listFields });
   },
 };
 

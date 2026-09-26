@@ -15,19 +15,28 @@ import { inboundWebhookSchema, reviewQuerySchema, rejectSchema } from './schemas
 
 /** Pull an attachment's bytes from Resend. Their download links expire in an hour. */
 const fetchFromResend: AttachmentFetcher = async (emailId, attachmentId) => {
+  // Both calls are bounded. A provider that accepts the connection and then
+  // stops talking would otherwise hold the webhook handler open indefinitely,
+  // and the caller of this endpoint is the internet.
   const listed = await fetch(
     `https://api.resend.com/emails/${encodeURIComponent(emailId)}/attachments`,
-    { headers: { Authorization: `Bearer ${config.RESEND_API_KEY}` } }
+    {
+      headers: { Authorization: `Bearer ${config.RESEND_API_KEY}` },
+      signal: AbortSignal.timeout(15_000),
+    }
   );
   if (!listed.ok) throw new Error(`attachment list failed: ${listed.status}`);
 
   const body = (await listed.json()) as {
     data?: Array<{ id: string; download_url?: string }>;
   };
-  const match = (body.data ?? []).find((a) => a.id === attachmentId) ?? (body.data ?? [])[0];
-  if (!match?.download_url) throw new Error('no download url for attachment');
+  // The id, or nothing. Falling back to the first attachment fetched whichever
+  // file happened to be listed first - a signature image, say - and stored it
+  // as the report the sender never sent.
+  const match = (body.data ?? []).find((a) => a.id === attachmentId);
+  if (!match?.download_url) throw new Error('no download url for the named attachment');
 
-  const file = await fetch(match.download_url);
+  const file = await fetch(match.download_url, { signal: AbortSignal.timeout(30_000) });
   if (!file.ok) throw new Error(`attachment download failed: ${file.status}`);
   return Buffer.from(await file.arrayBuffer());
 };
@@ -145,6 +154,10 @@ export async function inboundRoutes(app: FastifyInstance) {
       const file = await inboundService.getContent(request.params.schoolId, request.params.id);
       return reply
         .header('Content-Type', file.contentType ?? 'application/octet-stream')
+        // The content type came from the mail, so a sender chose it. The
+        // disposition below already stops a browser rendering it; nosniff stops
+        // one deciding for itself that the bytes are something else.
+        .header('X-Content-Type-Options', 'nosniff')
         .header(
           'Content-Disposition',
           `attachment; filename="${(file.filename ?? 'import').replace(/[^\w.\-]/g, '_')}"`

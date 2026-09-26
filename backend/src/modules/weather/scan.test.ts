@@ -369,6 +369,58 @@ describe('weatherScanService', () => {
       expect(await weatherBlockers()).toHaveLength(0);
     });
 
+    it('LEAVES a past closure alone, because this run never assessed it', async () => {
+      // A three-day scan is in no position to retract last month's closure: that
+      // is the record of what happened, not a forecast it still asserts. The
+      // withdrawal used to take every job-owned blocker under the prefix.
+      const historic = await prisma.blocker.create({
+        data: {
+          schoolId,
+          type: 'WEATHER',
+          name: 'Heat closure: Stadium Turf Field',
+          scope: 'FACILITY',
+          facilityId: stadiumId,
+          startDatetime: zonedTimeToUtc('2027-04-02', '15:00', TZ),
+          endDatetime: zonedTimeToUtc('2027-04-02', '18:30', TZ),
+          sourceKey: sourceKeyFor(schoolId, '2027-04-02', stadiumId),
+          createdBy: WEATHER_ACTOR,
+        },
+      });
+
+      const result = await weatherScanService.scanSchool(schoolId, {
+        now: NOW,
+        source: COOL,
+        quiet: true,
+      });
+
+      expect(result.blockersWithdrawn).toBe(0);
+      expect(await prisma.blocker.findUnique({ where: { id: historic.id } })).not.toBeNull();
+    });
+
+    it('tells people when an existing closure moves to a different window', async () => {
+      // upsertSourced returns `changed` for exactly this. Reading only
+      // blockerCreated meant a coach told "the stadium is out until 6:30" never
+      // heard that it had become 7:00.
+      await practiceOutdoors(DAY_2);
+      await prisma.notification.deleteMany({ where: { schoolId } });
+      await weatherScanService.scanSchool(schoolId, { now: NOW, source: HOT_ON_DAY_2 });
+
+      await setPolicy({
+        thresholdF: 82,
+        measure: 'WBGT',
+        lookaheadDays: 3,
+        practiceWindow: { start: '14:00', end: '19:00' },
+      });
+      const moved = await weatherScanService.scanSchool(schoolId, {
+        now: NOW,
+        source: HOT_ON_DAY_2,
+      });
+
+      expect(moved.blockersCreated).toBe(0);
+      expect(moved.blockersUpdated).toBe(1);
+      expect(moved.notificationsSent).toBe(1);
+    });
+
     it('never withdraws a blocker a person created', async () => {
       // withdrawSourced only touches rows carrying this job's sourceKey. A closure
       // someone typed in survives a scan that disagrees with it.
