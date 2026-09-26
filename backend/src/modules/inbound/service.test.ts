@@ -304,6 +304,25 @@ describe('inbound imports', () => {
       expect(['APPROVED', 'REJECTED']).toContain(row.status);
     });
 
+    it('NEVER returns the inbound address through the queue', async () => {
+      // Same credential the School payload was stopped from leaking, one surface
+      // over: toAddress is inboundAddress(token), and this queue is readable by
+      // STAFF, which includes COACH, while the endpoint that reveals the address
+      // is MANAGEMENT-only. Nothing rotates the token when a coach leaves.
+      const id = await pending();
+
+      const listed = await inboundService.list(schoolId, { page: 1, limit: 25 });
+      const one = await inboundService.getById(schoolId, id);
+
+      expect(JSON.stringify(listed)).not.toContain(token);
+      expect(JSON.stringify(one)).not.toContain(token);
+      expect(one).not.toHaveProperty('toAddress');
+
+      // Still recorded, so the row knows which address the file arrived on.
+      const row = await prisma.inboundImport.findUniqueOrThrow({ where: { id } });
+      expect(row.toAddress).toBe(inboundAddress(token));
+    });
+
     it('never returns file bytes in the queue listing', async () => {
       await pending();
       const listed = await inboundService.list(schoolId, { page: 1, limit: 25 });

@@ -293,7 +293,12 @@ const listFields = {
   schoolId: true,
   source: true,
   fromAddress: true,
-  toAddress: true,
+  // toAddress is DELIBERATELY absent. It is inboundAddress(token), i.e. the
+  // school's write credential, and this queue is STAFF-readable while the
+  // endpoint that exists to reveal that address is MANAGEMENT-only. Returning
+  // it here handed a COACH the same value the School payload was just stopped
+  // from leaking, and nothing rotates it when they leave. The column is kept so
+  // the row still records which address a file arrived on.
   subject: true,
   filename: true,
   contentType: true,
