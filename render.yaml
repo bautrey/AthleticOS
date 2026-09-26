@@ -38,13 +38,16 @@ services:
         fromDatabase:
           name: athleticos-db
           property: connectionString
-      # config.ts parses one schema for every entry point, so the job needs the
-      # same minimum set the API validates even where it never uses them.
+      # config.ts parses one schema for every entry point, so the job needs a
+      # JWT_SECRET to satisfy `z.string().min(32)` even though it never signs or
+      # verifies a token - it talks to the database and to api.weather.gov.
+      #
+      # Generated rather than copied from the API. `fromService` would put the
+      # live token-SIGNING key into a second service for no reason beyond
+      # passing a schema check, and anything that can read this cron's
+      # environment could then mint a valid session for any user.
       - key: JWT_SECRET
-        fromService:
-          name: athleticos-api
-          type: web
-          envVarKey: JWT_SECRET
+        generateValue: true
       - key: NODE_ENV
         value: production
       - key: WEATHER_MODE
