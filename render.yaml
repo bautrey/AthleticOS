@@ -120,13 +120,26 @@ databases:
     # `region` key, it goes on every service and the database together or on
     # none of them.
     #
-    # It DOES block psql from a laptop. The existing shared instance carries a
-    # single entry described as "Burke workstation (only external client)", and
-    # the equivalent belongs here too - but this repository is PUBLIC, and a
-    # residential IP tied to a named person does not go in it. Whoever
-    # provisions this adds that entry in the Render dashboard.
+    # It DOES block every external client, and that is a provisioning STEP
+    # rather than a follow-up: the data migration runs `pg_restore` from a
+    # workstation over the external host, so with this list in effect there is
+    # no path in and the restore fails before it starts. Order is create the
+    # instance, add the entry, migrate and restore, verify, cut over.
     #
-    # Consequence worth knowing: re-applying this blueprint later will remove a
-    # manually added entry, because an explicit list replaces rather than
-    # merges. Re-add it after any apply.
+    # The entry should then STAY. The existing shared instance carries one
+    # described as "Burke workstation (only external client)", and issue #13 is
+    # about this database being unrecoverable - a database nobody can reach
+    # externally is a database nobody can take a logical dump of. "Lock it
+    # down" and "be able to back it up" pull opposite ways here, and #13 says
+    # which wins.
+    #
+    # The entry is not in this file because the repository is PUBLIC and a
+    # residential IP tied to a named person does not go in it. Whoever
+    # provisions adds it in the dashboard.
+    #
+    # Re-applying this blueprint CAN reset this list - check `ipAllowList`
+    # after every apply. Whether an explicit list replaces a dashboard-added
+    # entry or merges with it is undocumented in the blueprint spec and neither
+    # I nor the render session has tested it, so this says the actionable thing
+    # rather than asserting a mechanism.
     ipAllowList: []
