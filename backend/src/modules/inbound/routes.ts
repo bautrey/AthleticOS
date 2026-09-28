@@ -64,7 +64,19 @@ export async function inboundWebhookRoutes(app: FastifyInstance) {
       return reply.status(503).send({ error: { message: 'Inbound email is not configured' } });
     }
 
-    const raw = (request.body as Buffer).toString('utf8');
+    // A POST with no body, or with no content-type, never reaches the raw parser
+    // registered above, so request.body is undefined and calling toString on it
+    // threw a 500 - on an endpoint the whole internet can reach, where the answer
+    // should be the same 401 every other unsigned request gets. Found by running
+    // the merge repro against production, not by a test: every test in the suite
+    // sets a content-type, so nothing exercised this.
+    const rawBody = request.body;
+    if (!Buffer.isBuffer(rawBody)) {
+      request.log.warn('inbound webhook called with no parseable body');
+      return reply.status(401).send({ error: { message: 'Invalid signature' } });
+    }
+
+    const raw = rawBody.toString('utf8');
     try {
       // The return value is deliberately discarded: svix has returned both the
       // raw string and a parsed object across versions, so the body is parsed

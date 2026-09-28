@@ -111,6 +111,25 @@ describe('inbound email webhook', () => {
       expect(await prisma.inboundImport.count({ where: { schoolId } })).toBe(0);
     });
 
+    it('rejects a POST with no body rather than throwing', async () => {
+      // Production returned 500 for this: with no content-type the raw-body
+      // parser never runs, request.body is undefined, and .toString() threw. The
+      // endpoint is reachable by anyone, so the answer has to be the same 401
+      // every other unsigned request gets.
+      const res = await app.inject({ method: 'POST', url: '/webhooks/inbound-email' });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('rejects a POST whose body never reached the parser', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/webhooks/inbound-email',
+        headers: { 'content-type': 'application/json' },
+        payload: '',
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
     it('rejects a forged signature', async () => {
       const { payload, headers } = signed(receivedEvent());
       const res = await post(
