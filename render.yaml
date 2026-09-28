@@ -2,6 +2,11 @@
 services:
   - type: web
     name: athleticos-api
+    # Stated rather than inherited. An omitted plan takes Render's own default,
+    # which is a fact about their spec version rather than about this file, and
+    # the lesson of the line below in `databases` is that the value standing
+    # next to the key is what bites.
+    plan: 0.5c-512mb
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -28,6 +33,7 @@ services:
   # to rebook a space and tell parents. The scan looks three days ahead.
   - type: cron
     name: athleticos-weather-scan
+    plan: 0.5c-512mb
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -62,6 +68,9 @@ services:
 
   - type: web
     name: athleticos-web
+    # No `plan` on purpose: this is a static site, and Render static sites do
+    # not take one. The two compute services above state theirs; this is not an
+    # omission somebody should come along and complete.
     runtime: static
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: ./frontend/dist
@@ -75,4 +84,62 @@ services:
 
 databases:
   - name: athleticos-db
-    plan: free
+    # NOT `free`. Render's free Postgres expires 30 days after creation, gives
+    # 14 more days to upgrade, and then deletes the database and all of its
+    # data - and free databases support no backups of any kind, so there is
+    # nothing to restore from. Applying this blueprint with `plan: free` would
+    # therefore delete a school's live schedule about 44 days later, from a
+    # change whose entire purpose is to make that data recoverable.
+    #
+    # `0.1c-256mb` is the smallest PAID tier and gets point-in-time recovery,
+    # which is the whole reason for a dedicated instance. The data is ~9.5 MB.
+    # Note the spelling: the API reports legacy names like `basic_4gb` on
+    # existing instances, while the blueprint spec documents the current ones
+    # (`0.1c-256mb`, `0.5c-1g`, `1c-2g`, ...). Render states elsewhere that
+    # legacy names remain valid in blueprints, so this is about using the
+    # documented spelling rather than about the old one being rejected - I have
+    # not tested that it is.
+    plan: 0.1c-256mb
+
+    # Closed to the public internet. Render's blueprint spec is explicit that
+    # omitting this field means "Render allows all IPs for a new database (all
+    # connections require valid credentials)" - so leaving it out would put a
+    # school's schedule, and its student and parent records, one leaked
+    # connection string away from anyone on the internet, with no JWT and no
+    # application code in the path.
+    #
+    # Services reach the database over the private internal network regardless
+    # of this list, so athleticos-api and athleticos-weather-scan are
+    # unaffected. Render's condition for that is same REGION and same
+    # WORKSPACE, not merely the same account - and it holds here only because
+    # nothing in this file declares a `region`, so everything defaults to
+    # oregon, which is where the current instance and API already run.
+    #
+    # So: putting a service in a different region silently takes it OFF the
+    # private network, and this closed list then locks it out. If anyone adds a
+    # `region` key, it goes on every service and the database together or on
+    # none of them.
+    #
+    # It DOES block every external client, and that is a provisioning STEP
+    # rather than a follow-up: the data migration runs `pg_restore` from a
+    # workstation over the external host, so with this list in effect there is
+    # no path in and the restore fails before it starts. Order is create the
+    # instance, add the entry, migrate and restore, verify, cut over.
+    #
+    # The entry should then STAY. The existing shared instance carries one
+    # described as "Burke workstation (only external client)", and issue #13 is
+    # about this database being unrecoverable - a database nobody can reach
+    # externally is a database nobody can take a logical dump of. "Lock it
+    # down" and "be able to back it up" pull opposite ways here, and #13 says
+    # which wins.
+    #
+    # The entry is not in this file because the repository is PUBLIC and a
+    # residential IP tied to a named person does not go in it. Whoever
+    # provisions adds it in the dashboard.
+    #
+    # Re-applying this blueprint CAN reset this list - check `ipAllowList`
+    # after every apply. Whether an explicit list replaces a dashboard-added
+    # entry or merges with it is undocumented in the blueprint spec and neither
+    # I nor the render session has tested it, so this says the actionable thing
+    # rather than asserting a mechanism.
+    ipAllowList: []
