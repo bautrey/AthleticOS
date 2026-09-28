@@ -7,6 +7,12 @@ services:
     # the lesson of the line below in `databases` is that the value standing
     # next to the key is what bites.
     plan: 0.5c-512mb
+    # Same reasoning, with sharper teeth: the spec says "You can't modify this
+    # value after creation", and a service in a different region from the
+    # database is off the private network, which `ipAllowList: []` then turns
+    # into no path to the database at all. Oregon because that is where the
+    # existing instance and API already run. See the note under `databases`.
+    region: oregon
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -34,6 +40,7 @@ services:
   - type: cron
     name: athleticos-weather-scan
     plan: 0.5c-512mb
+    region: oregon
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -68,9 +75,15 @@ services:
 
   - type: web
     name: athleticos-web
-    # No `plan` on purpose: this is a static site, and Render static sites do
-    # not take one. The two compute services above state theirs; this is not an
-    # omission somebody should come along and complete.
+    # No `plan` and no `region` on purpose: this is a static site, and the spec
+    # says static sites take neither - `region` is "Unsupported for static sites
+    # (which are hosted on a global CDN)". The two compute services above state
+    # both; this is not an omission somebody should come along and complete.
+    #
+    # Nothing is lost by it either. This site reaches the API over the public
+    # internet at VITE_API_URL below, from the visitor's browser rather than
+    # from Render, so it was never on the private network that the region keys
+    # exist to keep.
     runtime: static
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: ./frontend/dist
@@ -101,6 +114,19 @@ databases:
     # not tested that it is.
     plan: 0.1c-256mb
 
+    # Stated, not defaulted, and it has to match the two compute services above.
+    # The spec gives oregon as the default for both databases and non-workflow
+    # services, so an all-oregon deployment is what this file produced before
+    # these keys existed - but it produced it by everybody independently taking a
+    # default, which is a fact about Render's spec version rather than about this
+    # file. The private network, and therefore every path to this database once
+    # `ipAllowList` is closed, depends on those values agreeing.
+    #
+    # "You can't modify this value after creation." So a wrong region here is not
+    # a config error to correct later: it is a database to destroy and recreate,
+    # with the data migration run again.
+    region: oregon
+
     # Closed to the public internet. Render's blueprint spec is explicit that
     # omitting this field means "Render allows all IPs for a new database (all
     # connections require valid credentials)" - so leaving it out would put a
@@ -111,14 +137,17 @@ databases:
     # Services reach the database over the private internal network regardless
     # of this list, so athleticos-api and athleticos-weather-scan are
     # unaffected. Render's condition for that is same REGION and same
-    # WORKSPACE, not merely the same account - and it holds here only because
-    # nothing in this file declares a `region`, so everything defaults to
-    # oregon, which is where the current instance and API already run.
+    # WORKSPACE, not merely the same account. Both compute services and this
+    # database now say `region: oregon` explicitly, which is what satisfies the
+    # first half; the second half is not expressible in this file at all, so a
+    # blueprint applied into a different workspace from the database is a way to
+    # break this that no amount of YAML prevents.
     #
     # So: putting a service in a different region silently takes it OFF the
-    # private network, and this closed list then locks it out. If anyone adds a
-    # `region` key, it goes on every service and the database together or on
-    # none of them.
+    # private network, and this closed list then locks it out. The `region`
+    # values on the two compute services and on this database change together
+    # or not at all. The static site is the one exception and cannot take the
+    # key - see the comment on it above for why that costs nothing.
     #
     # It DOES block every external client, and that is a provisioning STEP
     # rather than a follow-up: the data migration runs `pg_restore` from a
