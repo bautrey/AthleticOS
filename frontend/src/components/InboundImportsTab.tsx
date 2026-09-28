@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   inboundApi,
+  saveBlob,
   type InboundImport,
   type InboundImportStatus,
   type ParseSummary,
@@ -120,6 +121,15 @@ export function InboundImportsTab({ schoolId }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inbound-address', schoolId] });
       setConfirmRotate(false);
+    },
+  });
+
+  // Fetched through axios so the auth interceptor runs. A plain link to the
+  // download route navigates without the Bearer token and just 401s.
+  const download = useMutation({
+    mutationFn: async (item: InboundImport) => {
+      const blob = await inboundApi.download(schoolId, item.id);
+      saveBlob(blob, item.filename ?? `import-${item.id}`);
     },
   });
 
@@ -293,12 +303,16 @@ export function InboundImportsTab({ schoolId }: Props) {
 
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   {item.sizeBytes !== null && (
-                    <a
-                      href={inboundApi.downloadUrl(schoolId, item.id)}
-                      className="text-sm text-blue-600 hover:underline whitespace-nowrap"
+                    <button
+                      type="button"
+                      onClick={() => download.mutate(item)}
+                      disabled={download.isPending}
+                      className="text-sm text-blue-600 hover:underline whitespace-nowrap disabled:opacity-50"
                     >
-                      Download
-                    </a>
+                      {download.isPending && download.variables?.id === item.id
+                        ? 'Downloading...'
+                        : 'Download'}
+                    </button>
                   )}
 
                   {item.status === 'NEEDS_REVIEW' && (
@@ -363,11 +377,12 @@ export function InboundImportsTab({ schoolId }: Props) {
           ))}
         </div>
 
-        {(approve.error || reject.error) && (
+        {(approve.error || reject.error || download.error) && (
           <div className="bg-red-50 text-red-600 p-3 rounded text-sm mt-3">
-            {(approve.error ?? reject.error) instanceof Error
-              ? (approve.error ?? reject.error)!.message
-              : 'That did not work.'}
+            {(() => {
+              const err = approve.error ?? reject.error ?? download.error;
+              return err instanceof Error ? err.message : 'That did not work.';
+            })()}
           </div>
         )}
       </section>

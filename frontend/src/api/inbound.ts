@@ -81,7 +81,31 @@ export const inboundApi = {
     return data.data;
   },
 
-  /** Where to fetch the file exactly as it arrived. */
-  downloadUrl: (schoolId: string, id: string): string =>
-    `${api.defaults.baseURL}/schools/${schoolId}/inbound/${id}/download`,
+  /**
+   * The file exactly as it arrived.
+   *
+   * Fetched rather than linked. The route needs a Bearer token, the axios client
+   * attaches one through an interceptor, and a plain <a href> navigation does not
+   * go through axios - so a link to this URL is a 401 dressed up as a download.
+   * Verified: without the header the route answers 401, with it 200.
+   */
+  download: async (schoolId: string, id: string): Promise<Blob> => {
+    const { data } = await api.get(`/schools/${schoolId}/inbound/${id}/download`, {
+      responseType: 'blob',
+    });
+    return data as Blob;
+  },
 };
+
+/** Hand a fetched blob to the browser as a file. */
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoking immediately can race the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
