@@ -93,6 +93,32 @@ databases:
     #
     # `0.1c-256mb` is the smallest PAID tier and gets point-in-time recovery,
     # which is the whole reason for a dedicated instance. The data is ~9.5 MB.
-    # Note the spelling: the API still reports legacy names like `basic_4gb` on
-    # existing instances, but the blueprint spec accepts only the current ones.
+    # Note the spelling: the API reports legacy names like `basic_4gb` on
+    # existing instances, while the blueprint spec documents the current ones
+    # (`0.1c-256mb`, `0.5c-1g`, `1c-2g`, ...). Render states elsewhere that
+    # legacy names remain valid in blueprints, so this is about using the
+    # documented spelling rather than about the old one being rejected - I have
+    # not tested that it is.
     plan: 0.1c-256mb
+
+    # Closed to the public internet. Render's blueprint spec is explicit that
+    # omitting this field means "Render allows all IPs for a new database (all
+    # connections require valid credentials)" - so leaving it out would put a
+    # school's schedule, and its student and parent records, one leaked
+    # connection string away from anyone on the internet, with no JWT and no
+    # application code in the path.
+    #
+    # Services in the same Render account reach the database over the private
+    # internal network regardless of this list, so athleticos-api and
+    # athleticos-weather-scan are unaffected.
+    #
+    # It DOES block psql from a laptop. The existing shared instance carries a
+    # single entry described as "Burke workstation (only external client)", and
+    # the equivalent belongs here too - but this repository is PUBLIC, and a
+    # residential IP tied to a named person does not go in it. Whoever
+    # provisions this adds that entry in the Render dashboard.
+    #
+    # Consequence worth knowing: re-applying this blueprint later will remove a
+    # manually added entry, because an explicit list replaces rather than
+    # merges. Re-add it after any apply.
+    ipAllowList: []
